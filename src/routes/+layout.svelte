@@ -5,6 +5,7 @@
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
 	import { BrowserStorage } from '$lib/browser-storage';
+	import MenuIcon from 'virtual:icons/mdi/menu';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -75,7 +76,9 @@
 		<!-- Navbar -->
 		<div class="flex items-center bg-base-300 shadow px-4 h-16">
 			<!-- Drawer Toggle Button -->
-			<button onclick={toggleDrawer} class="mr-4"> Toggle Drawer </button>
+			<button onclick={toggleDrawer} class="mr-4">
+				<MenuIcon />
+			</button>
 			<!-- Pin Button -->
 			<button onclick={togglePin} class="mr-4">
 				{isDrawerPinned ? 'Unpin' : 'Pin'}
