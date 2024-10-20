@@ -1,63 +1,66 @@
 <script lang="ts">
-	import { dbManager } from '$lib/rxdb/db';
-	import type { Category } from '$lib/rxdb/models/types';
 	import TrashIcon from 'virtual:icons/mdi/trash';
 	import DisplayInput from './ui/display-input.svelte';
+	import { liveQuery } from 'dexie';
+	import { getDbContext } from '$lib/context';
+	import CategoryIcon from './ui/icons/category-icon.svelte';
 	let { prefix }: { prefix: string } = $props();
+	const db = getDbContext();
 
-	let categories: Category[] = $state([]);
-	$effect(() => {
+	let categories = $derived.by(() => {
+		// noop just to make it reactive
 		prefix;
 
-		dbManager.getDB().then((db) => {
+		return liveQuery(() =>
 			db.category
-				.find({
-					selector: {
-						label: {
-							$regex: `^${prefix || '.*'}`
-						}
-					}
-				})
-				.$.subscribe((newCategories) => {
-					console.log('NEW', newCategories);
-					categories = newCategories;
-				});
-		});
+				.where('label')
+				.startsWithIgnoreCase(prefix ?? '')
+				.toArray()
+		);
 	});
 
 	async function handleChange(id: string, label: string) {
-		const db = await dbManager.getDB();
-		await db.category.find({ selector: { id } }).modify((category) => {
-			category.label = label;
-			return category;
+		// Update all transactions that reference this category
+		db.transaction('rw', db.category, db.tx, async () => {
+			await db.category.update(id, { label });
+
+			await db.tx.where('category.id').equals(id).modify({ category: { id, label } });
 		});
 	}
 
 	async function handleDelete(id: string) {
-		const db = await dbManager.getDB();
-		await db.category
-			.find({
-				selector: {
-					id
-				}
-			})
-			.remove();
+		if (!confirm('Are you sure you want to delete this category?')) return;
+
+		// Update all transactions that reference this category
+		db.transaction('rw', db.category, db.tx, async () => {
+			await db.category.delete(id);
+
+			await db.tx.where('category.id').equals(id).modify({ category: undefined });
+		});
 	}
 </script>
 
 <ul class="list-none flex flex-col gap-2">
-	{#each categories as category}
-		<li class="flex items-center justify-between">
-			<span class="flex items-center text-sm font-medium me-3"
-				><span class="flex w-2.5 h-2.5 bg-blue-600 rounded-full me-1.5 flex-shrink-0"></span>
-				<DisplayInput value={category.label} onSave={(value) => handleChange(category.id, value)} />
-			</span>
-			<button
-				class="btn btn-square btn-sm btn-error btn-ghost"
-				onclick={() => handleDelete(category.id)}
-			>
-				<TrashIcon />
-			</button>
-		</li>
-	{/each}
+	{#if $categories}
+		{#each $categories as category}
+			<li class="flex items-center justify-between">
+				<span class="flex items-center text-sm font-medium me-3 gap-1">
+					<CategoryIcon />
+					<DisplayInput
+						value={category.label}
+						onSave={(value) => handleChange(category.id, value)}
+					/>
+				</span>
+				<button
+					class="btn btn-square btn-sm btn-error btn-ghost"
+					onclick={() => handleDelete(category.id)}
+				>
+					<TrashIcon />
+				</button>
+			</li>
+		{/each}
+		{#if $categories.length === 0}
+			<li class="text-sm text-gray-500 mx-auto">No categories found</li>
+		{/if}
+	{/if}
 </ul>

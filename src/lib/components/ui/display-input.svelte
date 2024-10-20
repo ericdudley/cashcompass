@@ -4,7 +4,11 @@
 	import IconParkOutlineEnterKey from 'virtual:icons/icon-park-outline/enter-key';
 	import KeyboardEsc from 'virtual:icons/mdi/keyboard-esc';
 
-	let { value, onSave }: { value: string; onSave: (value: string) => void } = $props();
+	let {
+		value,
+		onSave,
+		showEditIcon
+	}: { value: string; onSave: (value: string) => void; showEditIcon?: boolean } = $props();
 
 	// Internal state to handle temporary editing state
 	let isEditing = $state(false);
@@ -64,13 +68,13 @@
 			}}
 		/>
 		<div
-			class="w-96 absolute top-0 left-0 right-0 flex items-center transform translate-y-[calc(-100%-0.5rem)]"
+			class="absolute top-0 left-1/2 flex items-center transform translate-y-[calc(-100%-0.5rem)] translate-x-[-50%] gap-2"
 		>
-			<button onclick={save} class="flex-1 btn btn-sm btn-success">
+			<button onclick={save} class="flex-1 btn btn-sm btn-success flex-nowrap">
 				Save
 				<IconParkOutlineEnterKey />
 			</button>
-			<button onclick={cancel} class="flex-1 btn btn-sm btn-error ml-2">
+			<button onclick={cancel} class="flex-1 btn btn-sm btn-error ml-2 flex-nowrap">
 				Cancel
 				<KeyboardEsc />
 			</button>
@@ -86,9 +90,11 @@
 		<span>
 			{value}
 		</span>
-		<span>
-			<Pencil />
-		</span>
+		{#if !!showEditIcon}
+			<span>
+				<Pencil />
+			</span>
+		{/if}
 	</span>
 {/if}
 

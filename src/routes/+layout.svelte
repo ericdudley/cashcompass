@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, type Snippet, type Component } from 'svelte';
+	import { onMount, setContext, type Snippet, type Component } from 'svelte';
 	import '../app.css';
 	import AppLogo from '$lib/components/ui/app-logo.svelte';
 	import { Routes } from '$lib/routes';
@@ -9,11 +9,17 @@
 	import TransactionIcon from '$lib/components/ui/icons/transaction-icon.svelte';
 	import CategoryIcon from '$lib/components/ui/icons/category-icon.svelte';
 	import MenuIcon from '$lib/components/ui/icons/menu-icon.svelte';
+	import { initDb } from '$lib/dexie';
+	import { browser } from '$app/environment';
 
 	onMount(async () => {
 		const flowbite = await import('flowbite');
 		flowbite.initFlowbite();
 	});
+
+	if (browser) {
+		setContext('db', initDb());
+	}
 
 	beforeNavigate((navigation) => {
 		const sidebar = document.getElementById('logo-sidebar');
@@ -135,4 +141,3 @@
 <div class="p-8 sm:ml-64 mt-14">
 	{@render children()}
 </div>
-white
