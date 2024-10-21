@@ -10,6 +10,7 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
+		"lint:fix": "prettier --write . && eslint . --fix",
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
 		"test:unit": "vitest"
@@ -46,6 +47,8 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"currency.js": "^2.0.4",
+		"date-fns": "^4.1.0",
 		"dexie": "^4.0.8",
 		"dexie-cloud-addon": "^4.0.8",
 		"flowbite": "^2.5.2",

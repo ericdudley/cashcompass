@@ -11,7 +11,7 @@ export type CashCompassDexie = Dexie & {
 export let db: CashCompassDexie;
 
 export function initDb() {
-	if (!!db) {
+	if (db) {
 		return;
 	}
 

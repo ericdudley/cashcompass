@@ -11,6 +11,8 @@
 	import MenuIcon from '$lib/components/ui/icons/menu-icon.svelte';
 	import { initDb } from '$lib/dexie';
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
+	import UserIcon from '$lib/components/ui/icons/user-icon.svelte';
 
 	onMount(async () => {
 		const flowbite = await import('flowbite');
@@ -56,7 +58,7 @@
 					<span class="sr-only">Open sidebar</span>
 					<MenuIcon />
 				</button>
-				<a href="https://flowbite.com" class="flex ms-2 md:me-24">
+				<a href="/" class="flex ms-2 md:me-24">
 					<AppLogo showTitle />
 				</a>
 			</div>
@@ -65,16 +67,12 @@
 					<div>
 						<button
 							type="button"
-							class="flex text-sm rounded-full focus:ring-4 focus:ring-neutral-300"
+							class="flex text-sm rounded-full focus:ring-4 focus:ring-neutral-600 p-1 hover:bg-neutral"
 							aria-expanded="false"
 							data-dropdown-toggle="dropdown-user"
 						>
 							<span class="sr-only">Open user menu</span>
-							<img
-								class="w-8 h-8 rounded-full"
-								src="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
-								alt="user"
-							/>
+							<UserIcon />
 						</button>
 					</div>
 					<div
@@ -120,7 +118,14 @@
 				title: string;
 			})}
 				<li>
-					<a href={route} class="flex items-center p-2 rounded-lg group">
+					<a
+						href={route}
+						class="flex items-center p-2 rounded-lg group {(route === '/' &&
+							$page.route.id === route) ||
+						(route !== '/' && $page.route.id?.startsWith(route))
+							? 'bg-primary-400 text-primary-content'
+							: ''}"
+					>
 						<Icon class="w-5 h-5 transition duration-75" />
 						<span class="ms-3">{title}</span>
 					</a>

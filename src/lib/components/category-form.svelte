@@ -26,11 +26,11 @@
 				autofocus
 			/>
 			{#if !!label}
-			<span
-				class="absolute left-0 bottom-0 text-xs font-medium text-neutral-400 transform translate-y-[120%] translate-x-0.5"
-			>
-				Submit to create a new category
-			</span>
+				<span
+					class="absolute left-0 bottom-0 text-xs font-medium text-neutral-400 transform translate-y-[120%] translate-x-0.5"
+				>
+					Submit to create a new category
+				</span>
 			{/if}
 		</div>
 		<button type="submit" class="btn btn-primary btn-square">

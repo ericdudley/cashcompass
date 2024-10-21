@@ -2,9 +2,14 @@
 	import CreateIcon from '$lib/components/ui/icons/create-icon.svelte';
 	import { getDbContext } from '$lib/context';
 	import { liveQuery } from 'dexie';
+	import CurrencyInput from './ui/currency-input.svelte';
+	import DateInput from './ui/date-input.svelte';
+	import { format } from 'date-fns';
+	import CategoryCombobox from './ui/category-combobox.svelte';
 
 	let { label = $bindable('') }: { label: string } = $props();
 
+	let unixMs = $state(Date.now());
 	let amount = $state(0);
 	let categoryId = $state('');
 
@@ -17,18 +22,15 @@
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
-		const selectedCategory = $categories?.find((c) => c.id === categoryId) || {
-			id: '',
-			label: ''
-		};
+		const selectedCategory = await db.category.get(categoryId);
 
 		await db.tx.add({
 			id: crypto.randomUUID(),
 			label,
-			amount: amount,
-			category: selectedCategory,
-			unixMs: Date.now(),
-			yyyyMMDd: new Date().toISOString().slice(0, 10)
+			amount,
+			category: selectedCategory!,
+			unixMs,
+			yyyyMMDd: format(unixMs, 'yyyy-MM-dd')
 		});
 
 		label = '';
@@ -38,14 +40,23 @@
 </script>
 
 <form class="flex flex-col gap-4" onsubmit={handleSubmit}>
-	<div>
-		<label for="label-input" class="block text-sm font-medium">Label</label>
+	<div class="form-control">
+		<div class="label">
+			<span class="label-text">Date</span>
+		</div>
+		<DateInput bind:unixMs />
+	</div>
+
+	<div class="form-control">
+		<div class="label">
+			<span class="label-text">Label</span>
+		</div>
 		<input
 			type="text"
 			id="label-input"
 			value={label}
 			oninput={(e) => {
-				label = e.target.value;
+				label = (e.target as HTMLInputElement).value;
 			}}
 			class="input w-full input-bordered"
 			placeholder="Transaction label"
@@ -54,39 +65,18 @@
 		/>
 	</div>
 
-	<div>
-		<label for="amount-input" class="block text-sm font-medium">Amount</label>
-		<input
-			type="number"
-			id="amount-input"
-			value={amount}
-			oninput={(e) => {
-				amount = parseFloat(e.target.value);
-			}}
-			class="input w-full input-bordered"
-			placeholder="Transaction amount"
-			required
-		/>
+	<div class="form-control">
+		<div class="label">
+			<span class="label-text">Amount</span>
+		</div>
+		<CurrencyInput bind:value={amount} />
 	</div>
 
-	<div>
-		<label for="category-select" class="block text-sm font-medium">Category</label>
-		<select
-			id="category-select"
-			value={categoryId}
-			onchange={(e) => {
-				categoryId = e.target.value;
-			}}
-			class="select w-full select-bordered"
-			required
-		>
-			{#if $categories}
-				<option value="" disabled selected>Select category</option>
-				{#each $categories as category}
-					<option value={category.id}>{category.label}</option>
-				{/each}
-			{/if}
-		</select>
+	<div class="form-control">
+		<div class="label">
+			<span class="label-text">Category</span>
+		</div>
+		<CategoryCombobox bind:selectedCategoryId={categoryId} />
 	</div>
 
 	<button type="submit" class="btn btn-primary flex items-center gap-2">

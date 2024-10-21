@@ -68,7 +68,7 @@
 			}}
 		/>
 		<div
-			class="absolute top-0 left-1/2 flex items-center transform translate-y-[calc(-100%-0.5rem)] translate-x-[-50%] gap-2"
+			class="absolute top-0 left-1/2 flex items-center transform translate-y-[calc(-100%-0.5rem)] translate-x-[-50%] gap-2 z-[100]"
 		>
 			<button onclick={save} class="flex-1 btn btn-sm btn-success flex-nowrap">
 				Save

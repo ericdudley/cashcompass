@@ -2,9 +2,6 @@ Make sure to get dexie-cloud.json and dexie-cloud.key setup for local developmen
 
 # create-svelte
 
-
-
-
 Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
 
 ## Creating a project
