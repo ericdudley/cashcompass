@@ -22,3 +22,7 @@ vite.config.ts.timestamp-*
 
 
 /old-cash-compass
+
+# Dexie.js
+dexie-cloud.key
+dexie-cloud.json
