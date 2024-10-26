@@ -5,13 +5,17 @@
 	import CurrencyInput from './ui/currency-input.svelte';
 	import DateInput from './ui/date-input.svelte';
 	import { format } from 'date-fns';
-	import CategoryCombobox from './ui/category-combobox.svelte';
+	import ComboBox from './ui/combobox.svelte';
+	import PlusIcon from './ui/icons/plus-icon.svelte';
+	import MinusIcon from './ui/icons/minus-icon.svelte';
 
 	let { label = $bindable('') }: { label: string } = $props();
 
 	let unixMs = $state(Date.now());
 	let amount = $state(0);
 	let categoryId = $state('');
+	let accountId = $state('');
+	let isDebit = $state(true);
 
 	const db = getDbContext();
 
@@ -19,23 +23,48 @@
 		return liveQuery(() => db.category.toArray());
 	});
 
+	const accounts = $derived.by(() => {
+		return liveQuery(() => db.account.toArray());
+	});
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
 		const selectedCategory = await db.category.get(categoryId);
+		const selectedAccount = await db.account.get(accountId);
 
 		await db.tx.add({
 			id: crypto.randomUUID(),
 			label,
-			amount,
+			amount: isDebit ? -amount : amount,
 			category: selectedCategory!,
+			account: selectedAccount!,
 			unixMs,
 			yyyyMMDd: format(unixMs, 'yyyy-MM-dd')
 		});
 
+		// Reset form fields
 		label = '';
 		amount = 0;
 		categoryId = '';
+	}
+
+	async function createCategory(inputValue: string) {
+		const newCategory = {
+			id: crypto.randomUUID(),
+			label: inputValue
+		};
+		await db.category.add(newCategory);
+		return newCategory;
+	}
+
+	async function createAccount(inputValue: string) {
+		const newAccount = {
+			id: crypto.randomUUID(),
+			label: inputValue
+		};
+		await db.account.add(newAccount);
+		return newAccount;
 	}
 </script>
 
@@ -54,15 +83,31 @@
 		<input
 			type="text"
 			id="label-input"
-			value={label}
-			oninput={(e) => {
-				label = (e.target as HTMLInputElement).value;
-			}}
+			bind:value={label}
 			class="input w-full input-bordered"
 			placeholder="Transaction label"
 			required
 			autofocus
 		/>
+	</div>
+
+	<div class="join flex items-center">
+		<button
+			type="button"
+			class="btn join-item flex-1 {isDebit ? 'btn-info' : ''}"
+			onclick={() => (isDebit = true)}
+		>
+			<MinusIcon />
+			<span>Debit</span>
+		</button>
+		<button
+			type="button"
+			class="btn join-item flex-1 {!isDebit ? 'btn-info' : ''}"
+			onclick={() => (isDebit = false)}
+		>
+			<PlusIcon />
+			<span>Credit</span>
+		</button>
 	</div>
 
 	<div class="form-control">
@@ -76,7 +121,30 @@
 		<div class="label">
 			<span class="label-text">Category</span>
 		</div>
-		<CategoryCombobox bind:selectedCategoryId={categoryId} />
+		<ComboBox
+			bind:selectedValue={categoryId}
+			items={$categories ? $categories : []}
+			displayProperty="label"
+			valueProperty="id"
+			placeholder="Select or type a category"
+			onCreateItem={createCategory}
+			required
+		/>
+	</div>
+
+	<div class="form-control">
+		<div class="label">
+			<span class="label-text">Account</span>
+		</div>
+		<ComboBox
+			bind:selectedValue={accountId}
+			items={$accounts ? $accounts : []}
+			displayProperty="label"
+			valueProperty="id"
+			placeholder="Select or type an account"
+			onCreateItem={createAccount}
+			required
+		/>
 	</div>
 
 	<button type="submit" class="btn btn-primary flex items-center gap-2">

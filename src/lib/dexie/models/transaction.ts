@@ -1,3 +1,4 @@
+import type { Account } from './account';
 import type { Category } from './category';
 
 export type Transaction = {
@@ -6,5 +7,6 @@ export type Transaction = {
 	yyyyMMDd: string;
 	amount: number;
 	category?: Category;
+	account?: Account;
 	label?: string;
 };

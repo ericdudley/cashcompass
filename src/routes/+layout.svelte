@@ -123,7 +123,7 @@
 						class="flex items-center p-2 rounded-lg group {(route === '/' &&
 							$page.route.id === route) ||
 						(route !== '/' && $page.route.id?.startsWith(route))
-							? 'bg-primary-400 text-primary-content'
+							? 'bg-primary-700 text-primary-content'
 							: ''}"
 					>
 						<Icon class="w-5 h-5 transition duration-75" />
