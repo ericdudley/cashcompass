@@ -1,10 +1,11 @@
 <script lang="ts">
 	import QuestionIcon from '$lib/components/ui/icons/question-icon.svelte';
-	import { getTransactionTotal } from '$lib/dexie/utils/transactions';
+	import { getTransactionTotal, getTransactionTotalByYear } from '$lib/dexie/utils/transactions';
 	import { formatAmount } from '$lib/format';
 	import Markdown from '@magidoc/plugin-svelte-marked';
 
 	let total = $derived.by(() => getTransactionTotal());
+	let totalsByYear = $derived.by(() => getTransactionTotalByYear());
 </script>
 
 <Markdown
@@ -27,5 +28,12 @@ We recommend you get started by creating a category. Categories are used to grou
 <Markdown
 	source={`
 	You've spent a total of ${formatAmount(total ? $total : 0)} so far. 
+
+	For each year: 
+	${Object.entries(totalsByYear && $totalsByYear ? $totalsByYear : {})
+		.map(([year, total]) => {
+			return `- ${year}: ${formatAmount(total)}`;
+		})
+		.join('\n')}
   `}
 />

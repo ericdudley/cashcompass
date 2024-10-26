@@ -76,7 +76,7 @@
 						</button>
 					</div>
 					<div
-						class="z-50 hidden my-4 text-base list-none bg-base-300 divide-y divide-neutral rounded shadow"
+						class="z-50 hidden my-4 list-none bg-base-300 divide-y divide-neutral rounded shadow"
 						id="dropdown-user"
 					>
 						<div class="px-4 py-3" role="none">
@@ -86,8 +86,13 @@
 						<ul class="py-1" role="none">
 							{#snippet menuItem({ route, title }: { route: string; title: string })}
 								<li>
-									<a href={route} class="block px-4 py-2 text-sm hover:bg-neutral" role="menuitem"
-										>{title}</a
+									<a
+										href={route}
+										class="block px-4 py-2 text-sm hover:bg-primary-400 {$page.route.id ===
+										route
+											? 'bg-primary-700 text-primary-content'
+											: ''}"
+										role="menuitem">{title}</a
 									>
 								</li>
 							{/snippet}
@@ -120,7 +125,7 @@
 				<li>
 					<a
 						href={route}
-						class="flex items-center p-2 rounded-lg group {(route === '/' &&
+						class="flex items-center p-2 rounded-lg group hover:bg-primary-400 {(route === '/' &&
 							$page.route.id === route) ||
 						(route !== '/' && $page.route.id?.startsWith(route))
 							? 'bg-primary-700 text-primary-content'

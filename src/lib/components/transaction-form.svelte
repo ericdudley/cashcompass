@@ -68,7 +68,7 @@
 	}
 </script>
 
-<form class="flex flex-col gap-4" onsubmit={handleSubmit}>
+<form class="flex flex-col gap-2" onsubmit={handleSubmit}>
 	<div class="form-control">
 		<div class="label">
 			<span class="label-text">Date</span>
@@ -89,25 +89,24 @@
 			required
 			autofocus
 		/>
-	</div>
-
-	<div class="join flex items-center">
-		<button
-			type="button"
-			class="btn join-item flex-1 {isDebit ? 'btn-info' : ''}"
-			onclick={() => (isDebit = true)}
-		>
-			<MinusIcon />
-			<span>Debit</span>
-		</button>
-		<button
-			type="button"
-			class="btn join-item flex-1 {!isDebit ? 'btn-info' : ''}"
-			onclick={() => (isDebit = false)}
-		>
-			<PlusIcon />
-			<span>Credit</span>
-		</button>
+		<div class="join flex items-center mt-2">
+			<button
+				type="button"
+				class="btn btn-sm join-item flex-1 {isDebit ? 'btn-info' : ''}"
+				onclick={() => (isDebit = true)}
+			>
+				<MinusIcon />
+				<span>Debit</span>
+			</button>
+			<button
+				type="button"
+				class="btn btn-sm join-item flex-1 {!isDebit ? 'btn-info' : ''}"
+				onclick={() => (isDebit = false)}
+			>
+				<PlusIcon />
+				<span>Credit</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="form-control">

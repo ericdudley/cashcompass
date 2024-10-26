@@ -18,7 +18,7 @@ export function initDb() {
 	}
 
 	db = new Dexie('cashcompass', {
-		addons: [dexieCloud]
+		// addons: [dexieCloud]
 	}) as CashCompassDexie;
 
 	// Schema declaration:
@@ -28,10 +28,10 @@ export function initDb() {
 		account: 'id, label'
 	});
 
-	db.cloud.configure({
-		databaseUrl: 'https://zosfaqgud.dexie.cloud',
-		requireAuth: true
-	});
+	// db.cloud.configure({
+	// 	databaseUrl: 'https://zosfaqgud.dexie.cloud',
+	// 	requireAuth: true
+	// });
 
 	return db;
 }
