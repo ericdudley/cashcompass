@@ -7,6 +7,7 @@
 	import { formatAmount } from '$lib/format';
 	import CategoryPill from './category-pill.svelte';
 	import type { Transaction } from '$lib/dexie/models/transaction';
+	import { parse, format } from 'date-fns';
 
 	let { prefix }: { prefix: string } = $props();
 	const db = getDbContext();
@@ -43,91 +44,112 @@
 			return [];
 		}
 
-		let lastYearTotal = 0;
-		let lastYearStr = '';
-		let lastMonthTotal = 0;
-		let lastMonthStr = '';
-		let lastDayTotal = 0;
-		let lastDayStr = '';
+		let lastYearStr = null;
+		let lastMonthStr = null;
+		let lastDayStr = null;
 
-		// Prepare the transactions array by adding a dummy transaction at the end
-		let transactionsWithDummy = [
-			...$transactions,
-			{ unixMs: 0, amount: 0, label: 'DUMMY', id: 'DUMMY', yyyyMMDd: '' }
-		];
+		let lastYearTotal = 0;
+		let lastMonthTotal = 0;
+		let lastDayTotal = 0;
 
 		let listItems = [];
 
-		for (let i = 0; i < transactionsWithDummy.length; i++) {
-			let transaction = transactionsWithDummy[i];
+		let lastIsoStr = '';
 
-			let date = new Date(transaction.unixMs);
-			let isoStr = date.toISOString();
-			let yearStr = date.getFullYear().toString();
-			let monthStr = date.toLocaleString('default', { month: 'short' });
-			let dayStr = date.toLocaleString('default', { weekday: 'short', day: '2-digit' });
+		for (let i = 0; i < $transactions.length; i++) {
+			let transaction = $transactions[i];
 
-			// Initialize lastYearStr, lastMonthStr, lastDayStr
-			if (!lastYearStr) lastYearStr = yearStr;
-			if (!lastMonthStr) lastMonthStr = monthStr;
-			if (!lastDayStr) lastDayStr = dayStr;
+			let date = transaction.yyyyMMDd
+				? parse(transaction.yyyyMMDd, 'yyyy-MM-dd', new Date())
+				: new Date();
+			let yearStr = format(date, 'yyyy');
+			let monthStr = format(date, 'MMM');
+			let dayStr = format(date, 'EEE, dd');
+			let isoStr = format(date, 'yyyy-MM-dd');
 
-			let itemsToAdd: Array<
-				| { type: 'yearHeader'; key: string; year: string; total: number }
-				| { type: 'monthHeader'; key: string; month: string; total: number }
-				| { type: 'dayHeader'; key: string; day: string; total: number }
-				| { type: 'transaction'; key: string; transaction: Transaction }
-			> = [];
+			let itemsToAdd = [];
 
-			if (lastYearStr !== yearStr || transaction.id === 'DUMMY') {
-				itemsToAdd.push({
-					type: 'yearHeader',
-					key: `year-${isoStr}`,
-					year: lastYearStr,
-					total: lastYearTotal
-				});
-				lastYearTotal = 0;
-				lastYearStr = yearStr;
-			}
-
-			if (lastMonthStr !== monthStr || transaction.id === 'DUMMY') {
-				itemsToAdd.push({
-					type: 'monthHeader',
-					key: `month-${isoStr}`,
-					month: lastMonthStr,
-					total: lastMonthTotal
-				});
-				lastMonthTotal = 0;
-				lastMonthStr = monthStr;
-			}
-
-			if (lastDayStr !== dayStr || transaction.id === 'DUMMY') {
+			// When the day changes (and it's not the first transaction)
+			if (lastDayStr !== null && lastDayStr !== dayStr) {
+				// Push headers for the previous date
 				itemsToAdd.push({
 					type: 'dayHeader',
-					key: `day-${isoStr}`,
+					key: `day-${lastIsoStr}`,
 					day: lastDayStr,
 					total: lastDayTotal
 				});
+
+				if (lastMonthStr !== monthStr) {
+					itemsToAdd.push({
+						type: 'monthHeader',
+						key: `month-${lastIsoStr}`,
+						month: lastMonthStr,
+						total: lastMonthTotal
+					});
+				}
+
+				if (lastYearStr !== yearStr) {
+					itemsToAdd.push({
+						type: 'yearHeader',
+						key: `year-${lastIsoStr}`,
+						year: lastYearStr,
+						total: lastYearTotal
+					});
+				}
+
+				// Reset totals for the new date
 				lastDayTotal = 0;
-				lastDayStr = dayStr;
+				lastMonthTotal = 0;
+				lastYearTotal = 0;
 			}
 
-			lastYearTotal += transaction.amount;
-			lastMonthTotal += transaction.amount;
+			// Update the last date trackers
+			lastDayStr = dayStr;
+			lastMonthStr = monthStr;
+			lastYearStr = yearStr;
+			lastIsoStr = isoStr;
+
+			// Accumulate totals
 			lastDayTotal += transaction.amount;
+			lastMonthTotal += transaction.amount;
+			lastYearTotal += transaction.amount;
 
-			if (transaction.id !== 'DUMMY') {
-				itemsToAdd.push({
-					type: 'transaction',
-					key: `transaction-${transaction.id}`,
-					transaction: transaction
-				});
-			}
+			// Add the transaction
+			itemsToAdd.push({
+				type: 'transaction',
+				key: `transaction-${transaction.id}`,
+				transaction: transaction
+			});
 
 			listItems.push(...itemsToAdd);
 		}
 
-		return listItems.reverse();
+		// After processing all transactions, push headers for the last date group
+		if (lastDayStr !== null) {
+			listItems.push({
+				type: 'dayHeader',
+				key: `day-${lastIsoStr}`,
+				day: lastDayStr,
+				total: lastDayTotal
+			});
+			listItems.push({
+				type: 'monthHeader',
+				key: `month-${lastIsoStr}`,
+				month: lastMonthStr,
+				total: lastMonthTotal
+			});
+			listItems.push({
+				type: 'yearHeader',
+				key: `year-${lastIsoStr}`,
+				year: lastYearStr,
+				total: lastYearTotal
+			});
+		}
+
+		// Reverse the list to have headers at the top
+		listItems.reverse();
+
+		return listItems;
 	});
 </script>
 
@@ -169,9 +191,6 @@
 							value={item.transaction.label ?? ''}
 							onSave={(value) => handleChange(item.transaction.id, value)}
 						/>
-					</span>
-					<span>
-						{new Date(item.transaction.unixMs).toLocaleDateString()}
 					</span>
 					<div class="flex gap-1 items-center">
 						{#if item.transaction.category}

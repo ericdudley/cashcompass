@@ -4,7 +4,7 @@
 	let { label = $bindable('') }: { label: string } = $props();
 </script>
 
-<div class="badge badge-info badge-sm flex items-center gap-1">
+<div class="badge badge-sm flex items-center gap-1">
 	<CategoryIcon />
 	{label}
 </div>
