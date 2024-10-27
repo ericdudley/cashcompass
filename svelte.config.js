@@ -11,10 +11,6 @@ const config = {
 		adapter: adapter({
 			fallback: '404.html'
 		}),
-		paths: {
-			base: process.argv.includes('dev') ? '' : process.env.BASE_PATH,
-			relative: true
-		}
 	},
 	compilerOptions: {
 		runes: true
@@ -22,7 +18,7 @@ const config = {
 	vitePlugin: {
 		dynamicCompileOptions({ filename }) {
 			if (filename.includes('node_modules')) {
-				return { runes: undefined }; // or false, check what works
+				return { runes: undefined };
 			}
 		}
 	}
