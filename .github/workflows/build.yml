@@ -1,34 +1,54 @@
-name: Build Website
+name: Deploy to GitHub Pages
+
 on:
   push:
-    branches-ignore:
-      - gh-pages
+    branches: 'main'
+
 jobs:
-  build:
+  build_site:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # If you're using pnpm, add this step then change the commands and cache key below to use `pnpm`
+      # - name: Install pnpm
+      #   uses: pnpm/action-setup@v3
+      #   with:
+      #     version: 8
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Enable corepack
-        run: corepack enable
-      - name: Use Yarn 3
-        run: yarn set version stable
-      - name: Install deps
-        if: steps.cache-dependencies.outputs.cache-hit != 'true'
-        run: yarn install --immutable
-      - name: Lint
-        run: yarn lint
-      - name: Build for production
-        run: yarn build
-      - name: Create CNAME file
-        run: echo "ericdudley.com" > ./build/CNAME
+ node-version: 20
+ cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: build
+        env:
+          BASE_PATH: '/${{ github.event.repository.name }}'
+        run: npm run build
+      - name: Upload Artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+ # this should match the `pages` option in your adapter-static options
+ path: 'build/'
+
+  deploy:
+    needs: build_site
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy
-        if: ${{ github.ref == 'refs/heads/main' }}
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build
+        id: deployment
+        uses: actions/deploy-pages@v4

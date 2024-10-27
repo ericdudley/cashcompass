@@ -88,8 +88,7 @@
 								<li>
 									<a
 										href={route}
-										class="block px-4 py-2 text-sm hover:bg-primary-400 {$page.route.id ===
-										route
+										class="block px-4 py-2 text-sm hover:bg-primary-400 {$page.route.id === route
 											? 'bg-primary-700 text-primary-content'
 											: ''}"
 										role="menuitem">{title}</a
