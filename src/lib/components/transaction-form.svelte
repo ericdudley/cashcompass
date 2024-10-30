@@ -1,16 +1,15 @@
 <script lang="ts">
 	import CreateIcon from '$lib/components/ui/icons/create-icon.svelte';
 	import { getDbContext } from '$lib/context';
+	import { format } from 'date-fns';
 	import { liveQuery } from 'dexie';
+	import ComboBox from './ui/combobox.svelte';
 	import CurrencyInput from './ui/currency-input.svelte';
 	import DateInput from './ui/date-input.svelte';
-	import { format } from 'date-fns';
-	import ComboBox from './ui/combobox.svelte';
-	import PlusIcon from './ui/icons/plus-icon.svelte';
 	import MinusIcon from './ui/icons/minus-icon.svelte';
+	import PlusIcon from './ui/icons/plus-icon.svelte';
 
-	let { label = $bindable('') }: { label: string } = $props();
-
+	let label = $state('');
 	let unixMs = $state(Date.now());
 	let amount = $state(0);
 	let categoryId = $state('');
@@ -73,7 +72,7 @@
 		<div class="label">
 			<span class="label-text">Date</span>
 		</div>
-		<DateInput bind:unixMs />
+		<DateInput bind:value={unixMs} />
 	</div>
 
 	<div class="form-control">
@@ -84,7 +83,7 @@
 			type="text"
 			id="label-input"
 			bind:value={label}
-			class="input w-full input-bordered"
+			class="input w-full input-bordered input-sm"
 			placeholder="Transaction label"
 			required
 			autofocus
@@ -121,7 +120,7 @@
 			<span class="label-text">Category</span>
 		</div>
 		<ComboBox
-			bind:selectedValue={categoryId}
+			bind:value={categoryId}
 			items={$categories ? $categories : []}
 			displayProperty="label"
 			valueProperty="id"
@@ -136,7 +135,7 @@
 			<span class="label-text">Account</span>
 		</div>
 		<ComboBox
-			bind:selectedValue={accountId}
+			bind:value={accountId}
 			items={$accounts ? $accounts : []}
 			displayProperty="label"
 			valueProperty="id"

@@ -7,15 +7,19 @@
 		valueProperty,
 		placeholder,
 		required,
-		selectedValue = $bindable(''),
-		onCreateItem
+		value = $bindable(''),
+		autofocus,
+		onCreateItem,
+		onkeydown
 	} = $props<{
 		items: any[];
 		displayProperty: string;
 		valueProperty: string;
 		placeholder: string;
 		required: boolean;
-		selectedValue: string;
+		value: string;
+		autofocus?: boolean;
+		onkeydown?: (event: KeyboardEvent) => void;
 		onCreateItem: (inputValue: string) => Promise<any>;
 	}>();
 
@@ -25,11 +29,20 @@
 	let focusedIndex = $state(-1);
 	let isCreatingItem = $state(false);
 
-	// Watch for changes in selectedValue to update inputValue
+	// Watch for changes in value to update inputValue
 	$effect(() => {
-		const selectedItem = items.find((item: any) => item[valueProperty] === selectedValue);
+		const selectedItem = items.find((item: any) => item[valueProperty] === value);
 		if (selectedItem) {
 			inputValue = selectedItem[displayProperty];
+		}
+	});
+
+	console.log('items', items);
+	items.forEach((item: any) => {
+		if (item[displayProperty]) {
+			console.log(item[displayProperty]);
+		} else {
+			console.log('no value property', item);
 		}
 	});
 
@@ -46,7 +59,7 @@
 		const matchingItem = items.find(
 			(item: any) => item[displayProperty].toLowerCase() === inputValue.toLowerCase()
 		);
-		selectedValue = matchingItem ? matchingItem[valueProperty] : '';
+		value = matchingItem ? matchingItem[valueProperty] : '';
 		focusedIndex = -1; // Reset focused index when input changes
 		isOpen = true; // Open dropdown when typing
 	}
@@ -66,7 +79,7 @@
 	// Handle selection from the dropdown
 	function selectItem(item: any) {
 		inputValue = item[displayProperty];
-		selectedValue = item[valueProperty];
+		value = item[valueProperty];
 		isOpen = false;
 		focusedIndex = -1;
 	}
@@ -105,6 +118,10 @@
 			isOpen = false;
 			focusedIndex = -1;
 		}
+
+		if (onkeydown) {
+			onkeydown(event);
+		}
 	}
 
 	// Function to handle submission if the item doesn't exist
@@ -121,14 +138,14 @@
 				try {
 					isCreatingItem = true;
 					const newItem = await onCreateItem(inputValue);
-					selectedValue = newItem[valueProperty];
+					value = newItem[valueProperty];
 				} finally {
 					isCreatingItem = false;
 				}
 			} else {
-				// Reset input and selectedValue if user cancels
+				// Reset input and value if user cancels
 				inputValue = '';
-				selectedValue = '';
+				value = '';
 			}
 		}
 	}
@@ -137,7 +154,7 @@
 <div class="relative">
 	<input
 		type="text"
-		class="input input-bordered w-full"
+		class="input input-bordered w-full input-sm"
 		{placeholder}
 		bind:value={inputValue}
 		oninput={onInput}
@@ -148,6 +165,7 @@
 		aria-autocomplete="list"
 		aria-controls="combobox-listbox"
 		role="combobox"
+		autofocus
 		{required}
 	/>
 	{#if isCreatingItem}
@@ -175,7 +193,7 @@
 						aria-selected={focusedIndex === index}
 						tabindex="-1"
 					>
-						{#if selectedValue === item[valueProperty]}
+						{#if value === item[valueProperty]}
 							<CheckIcon />
 						{/if}
 						{item[displayProperty]}

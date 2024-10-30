@@ -4,8 +4,15 @@
 
 	let {
 		value = $bindable(0),
-		currencyCode: _currencyCode
-	}: { value: number | null; currencyCode?: string } = $props();
+		currencyCode: _currencyCode,
+		onkeydown,
+		autofocus = false
+	}: {
+		value: number | null;
+		currencyCode?: string;
+		onkeydown?: (event: KeyboardEvent) => void;
+		autofocus?: boolean;
+	} = $props();
 	let inputValue = $state<string>('');
 
 	let currencySymbol = '$'; // default to USD TODO Support other currencies
@@ -17,7 +24,7 @@
 		} else {
 			inputValue = '';
 		}
-	});
+	});;
 
 	function onInput(event: Event) {
 		inputValue = (event.target as HTMLInputElement).value;
@@ -53,10 +60,12 @@
 </script>
 
 <input
-	class="input w-full input-bordered"
+	class="input w-full input-bordered input-sm"
 	type="text"
 	bind:value={inputValue}
 	oninput={onInput}
 	onblur={onBlur}
 	onfocus={onFocus}
+	{onkeydown}
+	{autofocus}
 />
