@@ -24,7 +24,7 @@ export function initDb() {
 	// Schema declaration:
 	db.version(1).stores({
 		category: 'id, label',
-		tx: 'id, unixMs, yyyyMMDd, amount, category.id, category.label, label',
+		tx: 'id, unixMs, yyyyMMDd, amount, category.id, category.label, label, account.id',
 		account: 'id, label'
 	});
 
