@@ -18,23 +18,34 @@
 		displaySnippet?: Snippet;
 	} = $props();
 
+	let inputRef: HTMLInputElement | null = $state(null);
+
 	let isEditing = $state(false);
 	let tempValue = $state(value);
+
+	$effect(() => {
+		if (isEditing && !!inputRef) {
+			inputRef.focus();
+		}
+	});
 
 	function enableEdit() {
 		tempValue = value;
 		isEditing = true;
+		window.addEventListener('click', handleClickOutside);
 	}
 
 	function save() {
 		value = tempValue;
 		isEditing = false;
 		onSave(value);
+		window.removeEventListener('click', handleClickOutside);
 	}
 
 	function cancel() {
 		tempValue = value;
 		isEditing = false;
+		window.removeEventListener('click', handleClickOutside);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -46,7 +57,10 @@
 	}
 
 	function handleClickOutside(event: MouseEvent) {
-		if (!(event.target as HTMLElement).closest('.editable-field')) {
+		if (
+			!(event.target as HTMLElement).closest('.editable-field') &&
+			!(event.target as HTMLElement).closest('.editing-overlay')
+		) {
 			cancel();
 		}
 	}
@@ -56,40 +70,9 @@
 	});
 </script>
 
-{#if isEditing}
-	<div class="relative">
-		{#if InputComponent}
-			<InputComponent
-				bind:value={tempValue}
-				onkeydown={handleKeydown}
-				onblur={save}
-				autofocus
-				class="input input-sm input-bordered w-full"
-			/>
-		{:else}
-			<input
-				bind:value={tempValue}
-				onkeydown={handleKeydown}
-				class="input input-sm input-bordered w-full"
-				autofocus
-				onblur={save}
-			/>
-		{/if}
-		<div
-			class="absolute top-0 left-1/2 flex items-center transform -translate-y-full -translate-x-1/2 gap-2 z-[100]"
-		>
-			<button onclick={save} class="flex-1 btn btn-sm btn-success flex-nowrap">
-				Save
-				<IconParkOutlineEnterKey />
-			</button>
-			<button onclick={cancel} class="flex-1 btn btn-sm btn-error ml-2 flex-nowrap">
-				Cancel
-				<KeyboardEsc />
-			</button>
-		</div>
-	</div>
-{:else}
-	<span
+<div class="relative inline-block editable-field">
+	<!-- Display component -->
+	<button
 		class="editable-field flex items-center gap-1 hover:cursor-pointer hover:border-b-2 hover:border-b-primary focus:border-b-2 focus:border-b-primary"
 		onclick={enableEdit}
 		tabindex="0"
@@ -98,25 +81,52 @@
 		{#if displaySnippet}
 			{@render displaySnippet()}
 		{:else}
-			<span>
-				{value}
-			</span>
+			<span>{value}</span>
 		{/if}
 		{#if !!showEditIcon}
 			<span>
 				<Pencil />
 			</span>
 		{/if}
-	</span>
-{/if}
+	</button>
 
-<style>
-	.editable-field .edit-icon {
-		opacity: 0;
-		transition: opacity 0.3s ease;
-	}
+	{#if isEditing}
+		<!-- Input and buttons -->
+		<div
+			class="absolute top-0 left-1/2 h-full flex items-center justify-center z-10 transform -translate-x-1/2 editing-overlay"
+		>
+			<div class="relative w-fit h-fit min-w-32 bg-base-300/90 p-6 rounded-md">
+				{#if InputComponent}
+					<InputComponent
+						bind:value={tempValue}
+						onkeydown={handleKeydown}
+						autofocus
+						class="input input-sm input-bordered w-fit editable-field"
+					/>
+				{:else}
+					<input
+						bind:this={inputRef}
+						bind:value={tempValue}
+						onkeydown={handleKeydown}
+						class="input input-sm input-bordered w-fit editable-field"
+						autofocus
+					/>
+				{/if}
 
-	.editable-field:hover .edit-icon {
-		opacity: 1;
-	}
-</style>
+				<!-- Save/Cancel buttons above the input -->
+				<div
+					class="flex items-center gap-4 absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2"
+				>
+					<button onclick={save} class="btn btn-sm btn-success flex-nowrap">
+						Save
+						<IconParkOutlineEnterKey />
+					</button>
+					<button onclick={cancel} class="btn btn-sm btn-error flex-nowrap">
+						Cancel
+						<KeyboardEsc />
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+</div>

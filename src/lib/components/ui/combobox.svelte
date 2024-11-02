@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import CheckIcon from './icons/check-icon.svelte';
 
 	let {
@@ -29,20 +30,21 @@
 	let focusedIndex = $state(-1);
 	let isCreatingItem = $state(false);
 
+	// Declare a reference to the input element
+	let inputRef: HTMLInputElement;
+
+	onMount(() => {
+		// Focus the input if autofocus is true
+		if (autofocus && inputRef) {
+			inputRef.focus();
+		}
+	});
+
 	// Watch for changes in value to update inputValue
 	$effect(() => {
 		const selectedItem = items.find((item: any) => item[valueProperty] === value);
 		if (selectedItem) {
 			inputValue = selectedItem[displayProperty];
-		}
-	});
-
-	console.log('items', items);
-	items.forEach((item: any) => {
-		if (item[displayProperty]) {
-			console.log(item[displayProperty]);
-		} else {
-			console.log('no value property', item);
 		}
 	});
 
@@ -165,8 +167,8 @@
 		aria-autocomplete="list"
 		aria-controls="combobox-listbox"
 		role="combobox"
-		autofocus
 		{required}
+		bind:this={inputRef}
 	/>
 	{#if isCreatingItem}
 		<div

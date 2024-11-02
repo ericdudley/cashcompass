@@ -2,25 +2,10 @@
 	import type { Transaction } from '$lib/dexie/models/transaction';
 	import { formatAmount } from '$lib/format';
 	import { format, parse } from 'date-fns';
-	import TrashIcon from 'virtual:icons/mdi/trash';
-	import CategoryPill from './category-pill.svelte';
-	import DisplayInput from './ui/display-input.svelte';
-	import TransactionIcon from './ui/icons/transaction-icon.svelte';
-	import EditableField from './ui/editable-field.svelte';
-	import CurrencyInput from './ui/currency-input.svelte';
-	import Combobox from './ui/combobox.svelte';
-	import CategoryCombobox from './category-combobox.svelte';
-	import { ca } from 'date-fns/locale';
-	import ClockIcon from './ui/icons/clock-icon.svelte';
-	import DateInput from './ui/date-input.svelte';
+	import TransactionListItem from './transaction-list-item.svelte';
 
-	let { txs, handleChange, handleDelete } = $props<{
+	let { txs } = $props<{
 		txs: Transaction[];
-		handleChange: (
-			id: string,
-			{ label, amount }: { label: string; amount: number; categoryId?: string; unixMs?: number }
-		) => void;
-		handleDelete: (id: string) => void;
 	}>();
 
 	type Item = { key: string } & (
@@ -164,61 +149,6 @@
 			<div class="mt-1 h-0.5 w-1/2 bg-base-300"></div>
 		</li>
 	{:else if item.type === 'transaction'}
-		<li class="flex items-center justify-between">
-			<span class="flex items-center text-sm font-medium me-3 gap-1">
-				<TransactionIcon />
-				<span>
-					<EditableField
-						value={formatAmount(item.transaction.amount) || '$0'}
-						onSave={(value) =>
-							handleChange(item.transaction.id, { label: item.transaction.label, amount: value })}
-						InputComponent={CurrencyInput}
-					/>
-				</span>
-				<DisplayInput
-					value={item.transaction.label ?? ''}
-					onSave={(value) =>
-						handleChange(item.transaction.id, { label: value, amount: item.transaction.amount })}
-				/>
-			</span>
-			<div class="flex gap-1 items-center">
-				{#if item.transaction.category}
-					{#snippet categoryPill()}
-						<CategoryPill label={item?.transaction?.category?.label ?? 'Unknown'} />
-					{/snippet}
-					<EditableField
-						onSave={(value) =>
-							handleChange(item.transaction.id, {
-								label: item.transaction.label,
-								amount: item.transaction.amount,
-								categoryId: value
-							})}
-						value={item.transaction.category.id}
-						InputComponent={CategoryCombobox}
-						displaySnippet={categoryPill}
-					/>
-				{/if}
-				{#snippet clock()}
-					<ClockIcon />
-				{/snippet}
-				<EditableField
-					onSave={(value) =>
-						handleChange(item.transaction.id, {
-							label: item.transaction.label,
-							amount: item.transaction.amount,
-							unixMs: value
-						})}
-					value={format(new Date(item.transaction.unixMs), 'yyyy-MM-dd')}
-					InputComponent={DateInput}
-					displaySnippet={clock}
-				/>
-				<button
-					class="btn btn-square btn-sm btn-error btn-ghost"
-					onclick={() => handleDelete(item.transaction.id)}
-				>
-					<TrashIcon />
-				</button>
-			</div>
-		</li>
+		<TransactionListItem transaction={item.transaction} />
 	{/if}
 {/each}

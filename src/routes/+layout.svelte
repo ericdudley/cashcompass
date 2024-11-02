@@ -1,6 +1,4 @@
 <script lang="ts">
-	export const prerender = true;
-	
 	import { onMount, setContext, type Snippet, type Component } from 'svelte';
 	import '../app.css';
 	import AppLogo from '$lib/components/ui/app-logo.svelte';

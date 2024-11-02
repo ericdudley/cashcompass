@@ -1,16 +1,17 @@
 <script lang="ts">
 	import CreateIcon from '$lib/components/ui/icons/create-icon.svelte';
 	import { getDbContext } from '$lib/context';
-	import { format } from 'date-fns';
+	import { parseISO } from 'date-fns';
 	import { liveQuery } from 'dexie';
 	import ComboBox from './ui/combobox.svelte';
 	import CurrencyInput from './ui/currency-input.svelte';
 	import DateInput from './ui/date-input.svelte';
 	import MinusIcon from './ui/icons/minus-icon.svelte';
 	import PlusIcon from './ui/icons/plus-icon.svelte';
+	import { format } from 'date-fns';
 
 	let label = $state('');
-	let unixMs = $state(Date.now());
+	let dateString = $state(format(new Date(), 'yyyy-MM-dd'));
 	let amount = $state(0);
 	let categoryId = $state('');
 	let accountId = $state('');
@@ -32,6 +33,9 @@
 		const selectedCategory = await db.category.get(categoryId);
 		const selectedAccount = await db.account.get(accountId);
 
+		// Convert dateString to Unix milliseconds if needed
+		const unixMs = parseISO(dateString).getTime();
+
 		await db.tx.add({
 			id: crypto.randomUUID(),
 			label,
@@ -39,13 +43,14 @@
 			category: selectedCategory!,
 			account: selectedAccount!,
 			unixMs,
-			yyyyMMDd: format(unixMs, 'yyyy-MM-dd')
+			yyyyMMDd: dateString
 		});
 
 		// Reset form fields
 		label = '';
 		amount = 0;
 		categoryId = '';
+		dateString = format(new Date(), 'yyyy-MM-dd');
 	}
 
 	async function createCategory(inputValue: string) {
@@ -72,7 +77,7 @@
 		<div class="label">
 			<span class="label-text">Date</span>
 		</div>
-		<DateInput bind:value={unixMs} />
+		<DateInput bind:value={dateString} />
 	</div>
 
 	<div class="form-control">

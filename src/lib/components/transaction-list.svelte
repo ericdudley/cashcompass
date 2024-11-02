@@ -26,37 +26,6 @@
 				.sortBy('yyyyMMDd')
 		);
 	});
-
-	async function handleChange(
-		id: string,
-		{
-			label,
-			amount,
-			categoryId,
-			unixMs
-		}: { label: string; amount: number; categoryId?: string; unixMs?: number }
-	) {
-		if (categoryId) {
-			const category = await db.category.get(categoryId);
-			if (!category) {
-				alert('Category not found');
-				return;
-			}
-			await db.tx.update(id, { label, amount, category });
-		} else {
-			await db.tx.update(id, { label, amount });
-		}
-
-		if (unixMs) {
-			await db.tx.update(id, { unixMs, yyyyMMDd: format(unixMs, 'yyyy-MM-dd') });
-		}
-	}
-
-	async function handleDelete(id: string) {
-		if (!confirm('Are you sure you want to delete this transaction?')) return;
-
-		await db.tx.delete(id);
-	}
 </script>
 
 <ul class="list-none flex flex-col gap-2">
@@ -71,6 +40,6 @@
 	</div>
 	<LoadingStatus items={$txs} label="transactions" />
 	{#if $txs}
-		<GroupedTransactionList txs={$txs} {handleChange} {handleDelete} />
+		<GroupedTransactionList txs={$txs} />
 	{/if}
 </ul>

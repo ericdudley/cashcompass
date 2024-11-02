@@ -13,18 +13,24 @@
 		onkeydown?: (event: KeyboardEvent) => void;
 		autofocus?: boolean;
 	} = $props();
-	let inputValue = $state<string>('');
 
+	let inputValue = $state<string>('');
 	let currencySymbol = '$'; // default to USD TODO Support other currencies
+	let inputRef: HTMLInputElement;
 
 	onMount(() => {
+		// Focus the input if autofocus is true
+		if (autofocus && inputRef) {
+			inputRef.focus();
+		}
+
 		// Format the initial value using currency.js
 		if (value !== null) {
 			inputValue = currency(value, { symbol: currencySymbol, precision: 2 }).format();
 		} else {
 			inputValue = '';
 		}
-	});;
+	});
 
 	function onInput(event: Event) {
 		inputValue = (event.target as HTMLInputElement).value;
@@ -67,5 +73,5 @@
 	onblur={onBlur}
 	onfocus={onFocus}
 	{onkeydown}
-	{autofocus}
+	bind:this={inputRef}
 />
