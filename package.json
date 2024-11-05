@@ -13,7 +13,8 @@
 		"lint:fix": "prettier --write . && eslint . --fix",
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
-		"test:unit": "vitest"
+		"test:unit": "vitest",
+		"tauri": "tauri"
 	},
 	"devDependencies": {
 		"@iconify/json": "^2.2.258",
@@ -23,6 +24,7 @@
 		"@sveltejs/adapter-static": "^3.0.6",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.1.2",
+		"@tauri-apps/cli": "^2.0.4",
 		"@types/eslint": "^9.6.0",
 		"@types/marked": "^6.0.0",
 		"@types/papaparse": "^5.3.15",
