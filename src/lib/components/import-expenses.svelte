@@ -24,7 +24,7 @@
 				db.transaction('rw', db.tx, db.category, db.account, async () => {
 					const importAccount = {
 						id: crypto.randomUUID(),
-						label: 'Cash Compass Imported'
+						label: 'Imported Expenses'
 					};
 					await db.account.add(importAccount);
 

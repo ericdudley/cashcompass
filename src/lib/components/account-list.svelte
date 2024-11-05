@@ -4,6 +4,7 @@
 	import { liveQuery } from 'dexie';
 	import { getDbContext } from '$lib/context';
 	import AccountIcon from './ui/icons/account-icon.svelte';
+	import type { Account } from '$lib/dexie/models/account';
 	let { prefix }: { prefix: string } = $props();
 	const db = getDbContext();
 
@@ -19,12 +20,25 @@
 		);
 	});
 
-	async function handleChange(id: string, label: string) {
+	async function onLabelChange(id: string, label: string) {
 		// Update all transactions that reference this account
 		db.transaction('rw', db.account, db.tx, async () => {
 			await db.account.update(id, { label });
 
-			await db.tx.where('account.id').equals(id).modify({ account: { id, label } });
+			const newAccount = await db.account.get(id);
+
+			await db.tx.where('account.id').equals(id).modify({ account: newAccount });
+		});
+	}
+
+	async function onAccountTypeChange(id: string, accountType: Account['accountType']) {
+		// Update all transactions that reference this account
+		db.transaction('rw', db.account, db.tx, async () => {
+			await db.account.update(id, { accountType });
+
+			const newAccount = await db.account.get(id);
+
+			await db.tx.where('account.id').equals(id).modify({ account: newAccount });
 		});
 	}
 
@@ -46,14 +60,33 @@
 			<li class="flex items-center justify-between">
 				<span class="flex items-center text-sm font-medium me-3 gap-1">
 					<AccountIcon />
-					<DisplayInput value={account.label} onSave={(value) => handleChange(account.id, value)} />
+					<DisplayInput
+						value={account.label}
+						onSave={(value) => onLabelChange(account.id, value)}
+					/>
 				</span>
-				<button
-					class="btn btn-square btn-sm btn-error btn-ghost"
-					onclick={() => handleDelete(account.id)}
-				>
-					<TrashIcon />
-				</button>
+				<div class="ml-auto">
+					<div class="join">
+						<button
+							class="btn btn-xs join-item {account.accountType === 'expenses' && 'btn-active'}"
+							onclick={() => onAccountTypeChange(account.id, 'expenses')}
+						>
+							Expenses
+						</button>
+						<button
+							class="btn btn-xs join-item {account.accountType === 'net_worth' && 'btn-active'}"
+							onclick={() => onAccountTypeChange(account.id, 'net_worth')}
+						>
+							Net Worth
+						</button>
+					</div>
+					<button
+						class="btn btn-square btn-sm btn-error btn-ghost"
+						onclick={() => handleDelete(account.id)}
+					>
+						<TrashIcon />
+					</button>
+				</div>
 			</li>
 		{/each}
 		{#if $accounts.length === 0}
