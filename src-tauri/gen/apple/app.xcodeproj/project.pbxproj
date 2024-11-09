@@ -259,7 +259,7 @@
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = app_iOS/app_iOS.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Distribution: Eric Dudley (W62S78SAG6)";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = "arm64-sim x86_64";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
@@ -280,11 +280,17 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  arm64-sim";
+				CODE_SIGN_STYLE = Manual;
 			};
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Eric Dudley (W62S78SAG6)";
 			name = release;
+				DEVELOPMENT_TEAM = W62S78SAG6;
 		};
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = W62S78SAG6;
 		3C6497CF9EADFA373F12EF5C /* release */ = {
+				PROVISIONING_PROFILE_SPECIFIER = "44215e17-03bc-44e1-83fa-a0fb86b730fd";
 			isa = XCBuildConfiguration;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "44215e17-03bc-44e1-83fa-a0fb86b730fd";
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -349,7 +355,7 @@
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = app_iOS/app_iOS.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Distribution: Eric Dudley (W62S78SAG6)";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = "arm64-sim x86_64";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
@@ -370,11 +376,17 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64  arm64-sim";
+				CODE_SIGN_STYLE = Manual;
 			};
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution: Eric Dudley (W62S78SAG6)";
 			name = debug;
+				DEVELOPMENT_TEAM = W62S78SAG6;
 		};
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = W62S78SAG6;
 		CAA806262C53A2E15E5DB0CA /* debug */ = {
+				PROVISIONING_PROFILE_SPECIFIER = "44215e17-03bc-44e1-83fa-a0fb86b730fd";
 			isa = XCBuildConfiguration;
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "44215e17-03bc-44e1-83fa-a0fb86b730fd";
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
