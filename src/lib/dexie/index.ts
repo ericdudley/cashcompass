@@ -18,20 +18,34 @@ export function initDb() {
 	}
 
 	db = new Dexie('cashcompass', {
-		// addons: [dexieCloud]
+		addons: [dexieCloud]
 	}) as CashCompassDexie;
 
 	// Schema declaration:
 	db.version(1).stores({
 		category: 'id, label',
-		tx: 'id, unixMs, yyyyMMDd, amount, category.id, category.label, label, account.id',
+		tx: 'id, iso8601, yyyyMMDd, amount, category.id, category.label, label, account.id, account.accountType',
 		account: 'id, label'
 	});
 
-	// db.cloud.configure({
-	// 	databaseUrl: 'https://zosfaqgud.dexie.cloud',
-	// 	requireAuth: true
-	// });
+	const isLocal = window.location.hostname === 'localhost';
+	const databaseUrl = isLocal ? 'https://zosfaqgud.dexie.cloud' : 'https://zknh9tjsp.dexie.cloud';
+	db.cloud.configure({
+		databaseUrl,
+		requireAuth: true
+	});
+
+	db.tx.hook('creating', function (primKey, tx, transaction) {
+		tx.yyyyMMDd = tx.iso8601.slice(0, 10);
+	});
+
+	db.tx.hook('updating', function (mods: Partial<Transaction>, primKey, tx, transaction) {
+		if (mods.hasOwnProperty('iso8601') && typeof mods.iso8601 === 'string') {
+			return {
+				yyyyMMDd: mods.iso8601.slice(0, 10)
+			};
+		}
+	});
 
 	return db;
 }

@@ -13,7 +13,9 @@
 		onCreateItem,
 		onkeydown
 	} = $props<{
-		items: any[];
+		items: {
+			[key: string]: any;
+		}[];
 		displayProperty: string;
 		valueProperty: string;
 		placeholder: string;
@@ -49,11 +51,15 @@
 	});
 
 	// Filtered items based on input
-	const filteredItems = $derived(
-		items.filter((item: any) =>
+	const filteredItems = $derived.by(() => {
+		const matchingItems = items.filter((item: any) =>
 			item[displayProperty].toLowerCase().includes(inputValue.toLowerCase())
-		)
-	);
+		);
+		const nonMatchingItems = items.filter(
+			(item: any) => !item[displayProperty].toLowerCase().includes(inputValue.toLowerCase())
+		);
+		return [...matchingItems, ...nonMatchingItems];
+	});
 
 	// Handle input changes
 	function onInput(event: Event) {

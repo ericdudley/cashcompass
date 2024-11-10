@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { db } from '$lib/dexie';
+	import type { Account } from '$lib/dexie/models/account';
 	import Papa from 'papaparse';
+	import { startOfDay, parseISO } from 'date-fns';
+	import { asTransaction } from '$lib/dexie/models/transaction';
 
 	let files = $state(null);
 	let loading = $state(false);
@@ -21,10 +24,13 @@
 					Description: string;
 				}>(result, { header: true });
 
+				console.log('data', data);
+
 				db.transaction('rw', db.tx, db.category, db.account, async () => {
-					const importAccount = {
+					const importAccount: Account = {
 						id: crypto.randomUUID(),
-						label: 'Imported Expenses'
+						label: `Imported Expenses ${new Date().toISOString()}`,
+						accountType: 'expenses'
 					};
 					await db.account.add(importAccount);
 
@@ -49,20 +55,39 @@
 							categoryMap.set(tx.Category, matchingCategory);
 						}
 					}
+					try {
+						for (let i = 0; i < data.data.length; i++) {
+							const tx = data.data[i];
+							const matchingCategory = categoryMap.get(tx.Category);
 
-					for (const tx of data.data) {
-						const matchingCategory = categoryMap.get(tx.Category);
+							if (!tx.Date) {
+								console.error('No date for tx', tx);
+								continue;
+							}
 
-						await db.tx.add({
-							id: crypto.randomUUID(),
-							label: tx.Description,
-							amount: -1 * parseFloat(tx.Amount?.replace('$', '').replace(',', '') ?? '0'),
-							category: matchingCategory,
-							account: importAccount,
-							unixMs: new Date(tx.Date).getTime(),
-							yyyyMMDd: tx.Date
-						});
+							const dateAtMidnight = startOfDay(parseISO(tx.Date)).toISOString();
+
+							console.count(`adding tx ${i + 1}/${data.data.length}`);
+
+							console.log(tx);
+							await db.tx.add(
+								asTransaction({
+									id: crypto.randomUUID(),
+									label: tx.Description,
+									amount: -1 * parseFloat(tx.Amount?.replace('$', '').replace(',', '') ?? '0'),
+									category: matchingCategory,
+									account: importAccount,
+									iso8601: dateAtMidnight
+								})
+							);
+							console.log('DONE');
+						}
+					} catch (e) {
+						console.error(e);
+						throw e;
 					}
+
+					console.log('DONE!');
 
 					loading = false;
 				});

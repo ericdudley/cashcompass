@@ -5,7 +5,8 @@
 		getCategoryMonthlyTotals,
 		getNetWorthByMonth,
 		getPercentageDiffFromLastMonth,
-		getTotalThisMonth
+		getTotalThisMonth,
+		searchLiveQuery
 	} from '$lib/dexie/utils/transactions';
 	import { formatAmount } from '$lib/format';
 	import { format, sub } from 'date-fns';
@@ -33,14 +34,11 @@
 		endDate;
 
 		// Create a store from the liveQuery observable
-		return liveQuery(() =>
-			db.tx
-				.where('yyyyMMDd')
-				.between(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), true, true)
-				.filter((tx) => tx.account?.accountType === 'expenses')
-				.filter((tx) => tx.amount < 0)
-				.sortBy('yyyyMMDd')
-		);
+		return searchLiveQuery({
+			startDate,
+			endDate,
+			accountType: 'expenses'
+		});
 	});
 
 	// Await the transactions store
@@ -53,9 +51,7 @@
 
 	// We need all txs in order to correctly calculate balances (until optimization for this is implemented)
 	const netWorthTxs = $derived.by(() =>
-		liveQuery(() =>
-			db.tx.filter((tx) => tx.account?.accountType === 'net_worth').sortBy('yyyyMMDd')
-		)
+		liveQuery(() => db.tx.filter((tx) => tx.account?.accountType === 'net_worth').sortBy('iso8601'))
 	);
 	const netWorthDataValue = $derived.by(() => getNetWorthByMonth($netWorthTxs ?? []));
 

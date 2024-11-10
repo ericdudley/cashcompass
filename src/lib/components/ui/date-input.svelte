@@ -25,7 +25,7 @@
 	onMount(() => {
 		if (value) {
 			dateValue = parseISO(value);
-			dateString = value; // Since value is already in 'yyyy-MM-dd' format
+			dateString = format(dateValue, 'yyyy-MM-dd'); // Format for the date input
 		} else {
 			dateString = '';
 			dateValue = null;
@@ -41,8 +41,8 @@
 	function onInput(event: Event) {
 		dateString = (event.target as HTMLInputElement).value;
 		if (dateString) {
-			dateValue = parseISO(dateString);
-			value = dateString;
+			dateValue = parseISO(dateString); // Parse date string to Date object
+			value = dateValue.toISOString(); // Convert Date object to ISO8601 string
 		} else {
 			dateValue = null;
 			value = '';
@@ -57,14 +57,14 @@
 			dateValue = addDays(new Date(), days);
 		}
 		dateString = format(dateValue, 'yyyy-MM-dd');
-		value = dateString;
+		value = dateValue.toISOString();
 	}
 
 	// Select a specific past day
 	function selectPastDay(daysAgo: number) {
 		dateValue = subDays(new Date(), daysAgo);
 		dateString = format(dateValue, 'yyyy-MM-dd');
-		value = dateString;
+		value = dateValue.toISOString();
 	}
 </script>
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import TrashIcon from 'virtual:icons/mdi/trash';
-	import DisplayInput from './ui/display-input.svelte';
-	import { liveQuery } from 'dexie';
 	import { getDbContext } from '$lib/context';
-	import AccountIcon from './ui/icons/account-icon.svelte';
 	import type { Account } from '$lib/dexie/models/account';
+	import { liveQuery } from 'dexie';
+	import TrashIcon from 'virtual:icons/mdi/trash';
+	import EditableField from './ui/editable-field.svelte';
+	import AccountIcon from './ui/icons/account-icon.svelte';
 	let { prefix }: { prefix: string } = $props();
 	const db = getDbContext();
 
@@ -60,7 +60,7 @@
 			<li class="flex items-center justify-between">
 				<span class="flex items-center text-sm font-medium me-3 gap-1">
 					<AccountIcon />
-					<DisplayInput
+					<EditableField
 						value={account.label}
 						onSave={(value) => onLabelChange(account.id, value)}
 					/>

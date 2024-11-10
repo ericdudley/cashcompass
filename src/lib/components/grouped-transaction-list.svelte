@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { Transaction } from '$lib/dexie/models/transaction';
 	import { formatAmount } from '$lib/format';
-	import { format, parse } from 'date-fns';
+	import { format, parse, parseISO } from 'date-fns';
 	import TransactionListItem from './transaction-list-item.svelte';
 
-	let { txs } = $props<{
+	let {
+		txs
+	}: {
 		txs: Transaction[];
-	}>();
+	} = $props();
 
 	type Item = { key: string } & (
 		| { type: 'yearHeader'; year: string; total: number }
@@ -30,9 +32,7 @@
 		for (let i = 0; i < txs.length; i++) {
 			let transaction = txs[i];
 
-			let date = transaction.yyyyMMDd
-				? parse(transaction.yyyyMMDd, 'yyyy-MM-dd', new Date())
-				: new Date();
+			let date = transaction.iso8601 ? parseISO(transaction.iso8601) : new Date();
 			let yearStr = format(date, 'yyyy');
 			let monthStr = format(date, 'MMM');
 			let dayStr = format(date, 'EEE, dd');

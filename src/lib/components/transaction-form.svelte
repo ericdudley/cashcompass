@@ -9,9 +9,12 @@
 	import MinusIcon from './ui/icons/minus-icon.svelte';
 	import PlusIcon from './ui/icons/plus-icon.svelte';
 	import { format } from 'date-fns';
+	import type { Account } from '$lib/dexie/models/account';
+	import { asTransaction, type TransactionInput } from '$lib/dexie/models/transaction';
+	import { currentIso8601 } from '$lib/utils/date';
 
 	let label = $state('');
-	let dateString = $state(format(new Date(), 'yyyy-MM-dd'));
+	let iso8601 = $state(currentIso8601());
 	let amount = $state(0);
 	let categoryId = $state('');
 	let accountId = $state('');
@@ -33,24 +36,22 @@
 		const selectedCategory = await db.category.get(categoryId);
 		const selectedAccount = await db.account.get(accountId);
 
-		// Convert dateString to Unix milliseconds if needed
-		const unixMs = parseISO(dateString).getTime();
-
-		await db.tx.add({
-			id: crypto.randomUUID(),
-			label,
-			amount: isDebit ? -amount : amount,
-			category: selectedCategory!,
-			account: selectedAccount!,
-			unixMs,
-			yyyyMMDd: dateString
-		});
+		await db.tx.add(
+			asTransaction({
+				id: crypto.randomUUID(),
+				label,
+				amount: isDebit ? -amount : amount,
+				category: selectedCategory!,
+				account: selectedAccount!,
+				iso8601
+			})
+		);
 
 		// Reset form fields
 		label = '';
 		amount = 0;
 		categoryId = '';
-		dateString = format(new Date(), 'yyyy-MM-dd');
+		iso8601 = currentIso8601();
 	}
 
 	async function createCategory(inputValue: string) {
@@ -63,9 +64,10 @@
 	}
 
 	async function createAccount(inputValue: string) {
-		const newAccount = {
+		const newAccount: Account = {
 			id: crypto.randomUUID(),
-			label: inputValue
+			label: inputValue,
+			accountType: 'expenses'
 		};
 		await db.account.add(newAccount);
 		return newAccount;
@@ -77,13 +79,14 @@
 		<div class="label">
 			<span class="label-text">Date</span>
 		</div>
-		<DateInput bind:value={dateString} />
+		<DateInput bind:value={iso8601} />
 	</div>
 
 	<div class="form-control">
 		<div class="label">
 			<span class="label-text">Label</span>
 		</div>
+		<!-- svelte-ignore a11y_autofocus -->
 		<input
 			type="text"
 			id="label-input"

@@ -104,6 +104,7 @@
 						class="input input-sm input-bordered w-fit editable-field"
 					/>
 				{:else}
+					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						bind:this={inputRef}
 						bind:value={tempValue}

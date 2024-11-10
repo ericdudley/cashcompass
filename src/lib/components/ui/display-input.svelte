@@ -34,7 +34,7 @@
 	}
 
 	// Handle Enter/Escape keys during editing
-	function handleKeydown(event) {
+	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			save();
 		} else if (event.key === 'Escape') {
@@ -43,7 +43,7 @@
 	}
 
 	// Save if clicked outside of the input
-	function handleClickOutside(event) {
+	function handleClickOutside(event: MouseEvent) {
 		if (event.target !== event.currentTarget) {
 			return;
 		}
@@ -58,6 +58,7 @@
 
 {#if isEditing}
 	<div class="relative">
+		<!-- svelte-ignore a11y_autofocus -->
 		<input
 			bind:value={tempValue}
 			onkeydown={handleKeydown}
@@ -81,7 +82,7 @@
 		</div>
 	</div>
 {:else}
-	<span
+	<button
 		class="editable-field flex items-center gap-1 hover:cursor-pointer hover:border-b-2 hover:border-b-primary focus:border-b-2 focus:border-b-primary"
 		onclick={enableEdit}
 		tabindex="0"
@@ -95,16 +96,5 @@
 				<Pencil />
 			</span>
 		{/if}
-	</span>
+	</button>
 {/if}
-
-<style>
-	.edit-icon {
-		opacity: 0;
-		transition: opacity 0.3s ease;
-	}
-
-	.editable-field:hover .edit-icon {
-		opacity: 1;
-	}
-</style>

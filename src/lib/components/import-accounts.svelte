@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { db } from '$lib/dexie';
+	import type { Account } from '$lib/dexie/models/account';
+	import { asTransaction } from '$lib/dexie/models/transaction';
+	import { getIso8601AtMidnight } from '$lib/utils/date';
 	import Papa from 'papaparse';
 
 	let files = $state(null);
@@ -34,7 +37,7 @@
 
 					// Get existing accounts
 					const existingAccounts = await db.account.toArray();
-					const accountMap = new Map<string, { id: string; label: string }>();
+					const accountMap = new Map<string, Account>();
 
 					// Create accounts based on the Account column
 					for (const row of data.data) {
@@ -45,7 +48,8 @@
 							if (!matchingAccount) {
 								matchingAccount = {
 									id: crypto.randomUUID(),
-									label: accountLabel
+									label: accountLabel,
+									accountType: 'net_worth'
 								};
 								await db.account.add(matchingAccount);
 								existingAccounts.push(matchingAccount);
@@ -80,20 +84,20 @@
 						for (const row of accountData) {
 							const balanceStr = row.Balance?.replace(/\$|,/g, '') ?? '0';
 							const balance = parseFloat(balanceStr);
-							const date = new Date(row.Date);
 
 							const amount = balance - previousBalance;
 
 							if (amount !== 0) {
-								await db.tx.add({
-									id: crypto.randomUUID(),
-									label: 'Reconciliation',
-									amount: amount,
-									category: reconciliationCategory,
-									account: account,
-									unixMs: date.getTime(),
-									yyyyMMDd: row.Date
-								});
+								await db.tx.add(
+									asTransaction({
+										id: crypto.randomUUID(),
+										label: 'Reconciliation',
+										amount: amount,
+										category: reconciliationCategory,
+										account: account,
+										iso8601: getIso8601AtMidnight(row.Date)
+									})
+								);
 							}
 
 							previousBalance = balance;

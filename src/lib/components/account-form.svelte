@@ -7,7 +7,7 @@
 	const db = getDbContext();
 
 	async function handleSubmit() {
-		await db.account.add({ id: crypto.randomUUID(), label });
+		await db.account.add({ id: crypto.randomUUID(), label, accountType: 'net_worth' });
 		label = '';
 	}
 </script>
@@ -16,6 +16,7 @@
 	<label for="simple-search" class="sr-only">Search</label>
 	<div class="flex items-center gap-2 w-full justify-between">
 		<div class="relative w-full">
+			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				type="text"
 				bind:value={label}

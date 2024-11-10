@@ -11,6 +11,8 @@
 	import EditableField from './ui/editable-field.svelte';
 	import ClockIcon from './ui/icons/clock-icon.svelte';
 	import TransactionIcon from './ui/icons/transaction-icon.svelte';
+	import AccountCombobox from './account-combobox.svelte';
+	import AccountPill from './account-pill.svelte';
 
 	let { transaction }: { transaction: Transaction } = $props();
 
@@ -24,6 +26,15 @@
 		await db.tx.update(transaction.id, { label });
 	}
 
+	async function onAccountChange(accountId: string) {
+		const account = await db.account.get(accountId);
+		if (!account) {
+			alert('Account not found');
+			return;
+		}
+		await db.tx.update(transaction.id, { account });
+	}
+
 	async function onCategoryChange(categoryId: string) {
 		const category = await db.category.get(categoryId);
 		if (!category) {
@@ -33,10 +44,9 @@
 		await db.tx.update(transaction.id, { category });
 	}
 
-	async function onDateChange(yyyyMMDd: string) {
+	async function onDateChange(iso8601: string) {
 		await db.tx.update(transaction.id, {
-			unixMs: parse(yyyyMMDd, 'yyyy-MM-dd', Date.now()).getTime(),
-			yyyyMMDd
+			iso8601
 		});
 	}
 
@@ -60,26 +70,32 @@
 			value={transaction.label ?? 'Unknown'}
 			onSave={(value) => onLabelChange(value)}
 		/>
-		<!-- <DisplayInput value={transaction.label ?? 'Unknown'} onSave={(value) => onLabelChange(value)} /> -->
 	</span>
 	<div class="flex gap-1 items-center">
-		{#if transaction.category}
-			{#snippet categoryPill()}
-				<CategoryPill label={transaction.category?.label ?? 'Unknown'} />
-			{/snippet}
-			<EditableField
-				onSave={(value) => onCategoryChange(value)}
-				value={transaction.category.id}
-				InputComponent={CategoryCombobox}
-				displaySnippet={categoryPill}
-			/>
-		{/if}
+		{#snippet accountPill()}
+			<AccountPill label={transaction.account?.label ?? 'Unknown'} />
+		{/snippet}
+		<EditableField
+			onSave={(value) => onAccountChange(value)}
+			value={transaction?.account?.id ?? ''}
+			InputComponent={AccountCombobox}
+			displaySnippet={accountPill}
+		/>
+		{#snippet categoryPill()}
+			<CategoryPill label={transaction.category?.label ?? 'Unknown'} />
+		{/snippet}
+		<EditableField
+			onSave={(value) => onCategoryChange(value)}
+			value={transaction?.category?.id ?? ''}
+			InputComponent={CategoryCombobox}
+			displaySnippet={categoryPill}
+		/>
 		{#snippet clock()}
 			<ClockIcon />
 		{/snippet}
 		<EditableField
 			onSave={(value) => onDateChange(value)}
-			value={transaction.yyyyMMDd}
+			value={transaction.iso8601}
 			InputComponent={DateInput}
 			displaySnippet={clock}
 		/>

@@ -1,6 +1,36 @@
-import { liveQuery } from 'dexie';
+import { formatYyyyMMDd } from '$lib/utils/date';
+import { parseISO } from 'date-fns';
+import { liveQuery, type Observable } from 'dexie';
+import sortBy from 'lodash-es/sortBy';
 import { db } from '..';
 import type { Transaction } from '../models/transaction';
+import type { Account } from '../models/account';
+
+export function searchLiveQuery({
+	startDate,
+	endDate,
+	prefix,
+	accountType
+}: {
+	startDate: Date;
+	endDate: Date;
+	prefix?: string;
+	accountType?: Account['accountType'];
+}): Observable<Transaction[]> {
+	return liveQuery(() =>
+		db.tx
+			.where('yyyyMMDd')
+			.between(formatYyyyMMDd(startDate), formatYyyyMMDd(endDate), true, true)
+			.and((tx) => (!!tx?.label?.startsWith && !!prefix ? tx.label.startsWith(prefix) : true))
+			.and(
+				(tx) =>
+					!!(!!accountType
+						? tx.account?.accountType && tx.account.accountType === accountType
+						: true)
+			)
+			.sortBy('iso8601')
+	);
+}
 
 function getMonthlyTotals(txs: Transaction[]): { [month: string]: number } {
 	const totals: { [month: string]: number } = {};
@@ -18,7 +48,7 @@ export function getTotalThisMonth(txs: Transaction[]): number {
 	const yearMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
 	return txs
-		.filter((tx) => tx.amount < 0 && tx.yyyyMMDd.startsWith(yearMonth))
+		.filter((tx) => tx.amount < 0 && tx.iso8601.startsWith(yearMonth))
 		.reduce((acc, tx) => acc + tx.amount, 0);
 }
 
@@ -51,7 +81,6 @@ export function getAverageMonthly(txs: Transaction[]): number {
 	const currentYearMonth = year * 12 + month;
 
 	const monthlyTotals = getMonthlyTotals(txs);
-	console.log('monthlyTotals', monthlyTotals);
 	const fullMonths = Object.keys(monthlyTotals).filter((month) => {
 		const [txYear, txMonth] = month.split('-').map(Number);
 		return txYear * 12 + txMonth < currentYearMonth;
@@ -104,8 +133,7 @@ export function getNetWorthByMonth(txs: Transaction[]) {
 		accountBalances[accountId] = 0;
 	});
 
-	// Filter transactions with positive amounts and sort them by date
-	const sortedTxs = txs.sort((a, b) => a.unixMs - b.unixMs);
+	const sortedTxs = sortBy(txs, 'iso8601');
 
 	// Process each transaction
 	for (const tx of sortedTxs) {
@@ -117,7 +145,7 @@ export function getNetWorthByMonth(txs: Transaction[]) {
 		// Update account balance
 		accountBalances[accountId] += tx.amount;
 
-		const date = new Date(tx.unixMs);
+		const date = parseISO(tx.iso8601);
 		const yearMonth = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
 
 		if (!(yearMonth in netWorthByMonth)) {

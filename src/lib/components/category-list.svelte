@@ -1,8 +1,8 @@
 <script lang="ts">
-	import TrashIcon from 'virtual:icons/mdi/trash';
-	import DisplayInput from './ui/display-input.svelte';
-	import { liveQuery } from 'dexie';
 	import { getDbContext } from '$lib/context';
+	import { liveQuery } from 'dexie';
+	import TrashIcon from 'virtual:icons/mdi/trash';
+	import EditableField from './ui/editable-field.svelte';
 	import CategoryIcon from './ui/icons/category-icon.svelte';
 	let { prefix }: { prefix: string } = $props();
 	const db = getDbContext();
@@ -46,7 +46,7 @@
 			<li class="flex items-center justify-between">
 				<span class="flex items-center text-sm font-medium me-3 gap-1">
 					<CategoryIcon />
-					<DisplayInput
+					<EditableField
 						value={category.label}
 						onSave={(value) => handleChange(category.id, value)}
 					/>

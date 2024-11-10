@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { getDbContext } from '$lib/context';
-	import { format, subDays } from 'date-fns';
+	import { endOfDay, format, startOfDay, subDays } from 'date-fns';
 	import { liveQuery } from 'dexie';
 	import GroupedTransactionList from './grouped-transaction-list.svelte';
 	import DateRangeInput from './ui/date-range-input.svelte';
 	import LoadingStatus from './ui/loading-status.svelte';
+	import { searchLiveQuery } from '$lib/dexie/utils/transactions';
 
 	const db = getDbContext();
 
@@ -18,13 +19,11 @@
 		startDate;
 		endDate;
 
-		return liveQuery(() =>
-			db.tx
-				.where('yyyyMMDd')
-				.between(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd'), true, true)
-				.and((tx) => (!!tx?.label?.startsWith ? tx.label.startsWith(prefix) : true))
-				.sortBy('yyyyMMDd')
-		);
+		return searchLiveQuery({
+			startDate,
+			endDate,
+			prefix
+		});
 	});
 </script>
 
