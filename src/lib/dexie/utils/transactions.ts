@@ -162,6 +162,7 @@ export function getNetWorthByMonth(txs: Transaction[]) {
 	// Build the result with filled-in balances
 	const result: { [accountLabel: string]: { [month: string]: number } } = {};
 
+	let total = 0;
 	accountsSet.forEach((accountId) => {
 		const accountLabel = accountLabels[accountId];
 		let lastBalance = 0;
@@ -173,11 +174,14 @@ export function getNetWorthByMonth(txs: Transaction[]) {
 			}
 			result[accountLabel][month] = lastBalance;
 		}
+
+		total += lastBalance;
 	});
 
 	return {
 		months,
-		data: result // { accountLabel: { 'yyyy-MM': balance } }
+		data: result, // { accountLabel: { 'yyyy-MM': balance } }
+		total
 	};
 }
 

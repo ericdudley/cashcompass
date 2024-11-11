@@ -54,7 +54,7 @@
 		liveQuery(() => db.tx.filter((tx) => tx.account?.accountType === 'net_worth').sortBy('iso8601'))
 	);
 	const netWorthDataValue = $derived.by(() => getNetWorthByMonth($netWorthTxs ?? []));
-
+	
 	// Prepare months, categories, and table data using $computed
 	const months = $derived.by(() => categoryMonthlyTotals?.months || []);
 	// FIXME Fix this type
@@ -94,6 +94,11 @@
 		<div class="stat-title">Average Monthly</div>
 		<div class="stat-value">{formatAmount(averageMonthly ?? 0)}</div>
 		<div class="stat-desc">Excluding the current month</div>
+	</div>
+	<div class="stat">
+		<div class="stat-title">Net Worth</div>
+		<div class="stat-value">{formatAmount(netWorthDataValue?.total)}</div>
+		<div class="stat-desc">As of {format(new Date(), 'MMM yyyy')}</div>
 	</div>
 </div>
 
