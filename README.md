@@ -1,4 +1,10 @@
+
+IOS Deploy
+1. `npm run tauri ios build -- --export-method app-store-connect`
+2. `xcrun altool --upload-app --type ios --file "[PATHTOREPO]/src-tauri/gen/apple/build/arm64/cashcompass.ipa" --apiKey $APPLE_API_KEY_ID --apiIssuer $APPLE_API_ISSUER`
+
 Make sure to get dexie-cloud.json and dexie-cloud.key setup for local development.
+
 
 # create-svelte
 

@@ -26,3 +26,5 @@ vite.config.ts.timestamp-*
 # Dexie.js
 dexie-cloud.key
 dexie-cloud.json
+
+project.pbxproj
