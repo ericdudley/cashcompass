@@ -93,7 +93,7 @@
 	{#if isEditing}
 		<!-- Input and buttons -->
 		<div
-			class="absolute top-0 left-1/2 h-full flex items-center justify-center z-10 transform -translate-x-1/2 editing-overlay"
+			class="absolute top-0 left-1/2 h-full flex items-center justify-center transform -translate-x-1/2 editing-overlay z-[100]"
 		>
 			<div class="relative w-fit h-fit min-w-32 bg-base-300/90 p-6 rounded-md">
 				{#if InputComponent}

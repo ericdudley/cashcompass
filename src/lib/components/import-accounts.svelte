@@ -7,6 +7,7 @@
 
 	let files = $state(null);
 	let loading = $state(false);
+	let exporting = $state(false);
 
 	$effect(() => {
 		if (files) {
@@ -24,7 +25,7 @@
 					Balance: string;
 				}>(result, { header: true });
 
-				db.transaction('rw', db.tx, db.category, db.account, async () => {
+				await db.transaction('rw', db.tx, db.category, db.account, async () => {
 					// Ensure "Reconciliation" category exists
 					let reconciliationCategory = await db.category.get({ label: 'Reconciliation' });
 					if (!reconciliationCategory) {
@@ -110,6 +111,69 @@
 			reader.readAsText(files[0]);
 		}
 	});
+
+	async function exportData() {
+		exporting = true;
+
+		// Get all accounts
+		const accounts = await db.account.where('accountType').equals('net_worth').toArray();
+
+		// Initialize an array to hold the export data
+		const exportDataArray = [];
+
+		// For each account
+		for (const account of accounts) {
+			// Get all transactions for this account
+			const transactions = await db.tx.where('account.id').equals(account.id).toArray();
+
+			// Sort transactions by date
+			transactions.sort((a, b) => new Date(a.iso8601).getTime() - new Date(b.iso8601).getTime());
+
+			// Initialize cumulative balance
+			let balance = 0;
+
+			// Create a map to hold balance per date
+			const dateBalanceMap = new Map<string, number>();
+
+			// For each transaction
+			for (const tx of transactions) {
+				const date = tx.iso8601;
+				balance += tx.amount;
+
+				// Store balance for this date
+				dateBalanceMap.set(date, balance);
+			}
+
+			// Now, for each date, create a row in the export data
+			for (const [date, balance] of dateBalanceMap) {
+				exportDataArray.push({
+					Account: account.label,
+					Date: date,
+					Balance: balance.toFixed(2)
+				});
+			}
+		}
+
+		// Convert the export data to CSV format
+		const csv = Papa.unparse(exportDataArray);
+
+		// Create a Blob from the CSV
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+		// Create a link and trigger download
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.setAttribute('href', url);
+		link.setAttribute('download', 'export.csv');
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+
+		// Clean up
+		URL.revokeObjectURL(url);
+
+		exporting = false;
+	}
 </script>
 
 <p>Import your account data from the previous version of Cash Compass</p>
@@ -118,3 +182,11 @@
 {#if loading}
 	<p>Loading...</p>
 {/if}
+
+<button class="btn btn-primary" onclick={exportData} disabled={exporting}>
+	{#if exporting}
+		Exporting...
+	{:else}
+		Export Data
+	{/if}
+</button>

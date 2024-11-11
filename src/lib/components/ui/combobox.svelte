@@ -46,17 +46,17 @@
 	$effect(() => {
 		const selectedItem = items.find((item: any) => item[valueProperty] === value);
 		if (selectedItem) {
-			inputValue = selectedItem[displayProperty];
+			inputValue = selectedItem[displayProperty] ?? '';
 		}
 	});
 
 	// Filtered items based on input
 	const filteredItems = $derived.by(() => {
 		const matchingItems = items.filter((item: any) =>
-			item[displayProperty].toLowerCase().includes(inputValue.toLowerCase())
+			item[displayProperty]?.toLowerCase().includes(inputValue.toLowerCase())
 		);
 		const nonMatchingItems = items.filter(
-			(item: any) => !item[displayProperty].toLowerCase().includes(inputValue.toLowerCase())
+			(item: any) => !item[displayProperty]?.toLowerCase().includes(inputValue.toLowerCase())
 		);
 		return [...matchingItems, ...nonMatchingItems];
 	});
@@ -65,7 +65,7 @@
 	function onInput(event: Event) {
 		inputValue = (event.target as HTMLInputElement).value;
 		const matchingItem = items.find(
-			(item: any) => item[displayProperty].toLowerCase() === inputValue.toLowerCase()
+			(item: any) => item[displayProperty]?.toLowerCase() === inputValue.toLowerCase()
 		);
 		value = matchingItem ? matchingItem[valueProperty] : '';
 		focusedIndex = -1; // Reset focused index when input changes

@@ -3,6 +3,7 @@
 // Define the type for localSettings
 interface LocalSettings {
 	isSidebarPinned: boolean;
+	lastAccountId?: string;
 }
 
 // Map keys to their corresponding types
@@ -12,6 +13,12 @@ interface StorageSchema {
 
 // Type alias for the keys of the storage schema
 type StorageKey = keyof StorageSchema;
+
+const DEFAULT_VALUES: Record<StorageKey, StorageSchema[StorageKey]> = {
+	localSettings: {
+		isSidebarPinned: false
+	}
+};
 
 // Create a class to handle storage operations
 export class BrowserStorage {
@@ -42,11 +49,12 @@ export class BrowserStorage {
 	}
 
 	// Merges the current item with the new item
-	patchItem<K extends StorageKey>(key: K, value: StorageSchema[K]): void {
-		const currentValue = this.getItem(key) || {};
-		console.log('currentValue', currentValue);
-		const mergedValue = { ...currentValue, ...value };
-		console.log('mergedValue', mergedValue);
+	patchItem<K extends StorageKey>(key: K, value: Partial<StorageSchema[K]>): void {
+		const currentValue = this.getItem(key) || DEFAULT_VALUES[key];
+		const mergedValue = {
+			...currentValue,
+			...value
+		};
 		this.setItem(key, mergedValue);
 	}
 

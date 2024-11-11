@@ -8,6 +8,8 @@ on:
 jobs:
   build_site:
     runs-on: ubuntu-latest
+    env:
+      IS_CI_BUILD: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

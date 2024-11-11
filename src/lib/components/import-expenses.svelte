@@ -4,9 +4,12 @@
 	import Papa from 'papaparse';
 	import { startOfDay, parseISO } from 'date-fns';
 	import { asTransaction } from '$lib/dexie/models/transaction';
+	import { UNKNOWN_LABELS } from '$lib/dexie/utils/common';
 
 	let files = $state(null);
 	let loading = $state(false);
+	let exporting = $state(false);
+
 	$effect(() => {
 		if (files) {
 			const reader = new FileReader();
@@ -26,7 +29,7 @@
 
 				console.log('data', data);
 
-				db.transaction('rw', db.tx, db.category, db.account, async () => {
+				await db.transaction('rw', db.tx, db.category, db.account, async () => {
 					const importAccount: Account = {
 						id: crypto.randomUUID(),
 						label: `Imported Expenses ${new Date().toISOString()}`,
@@ -95,6 +98,43 @@
 			reader.readAsText(files[0]);
 		}
 	});
+
+	async function exportData() {
+		exporting = true;
+
+		// Get all transactions
+		const transactions = await db.tx.where('account.accountType').equals('expenses').toArray();
+
+		// Prepare the export data array
+		const exportDataArray = transactions.map((tx) => {
+			return {
+				Amount: (-tx.amount).toFixed(2),
+				Category: tx.category?.label ?? UNKNOWN_LABELS.category,
+				Date: tx.iso8601,
+				Description: tx.label
+			};
+		});
+
+		// Convert the export data to CSV format
+		const csv = Papa.unparse(exportDataArray);
+
+		// Create a Blob from the CSV
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+		// Create a link and trigger download
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.setAttribute('href', url);
+		link.setAttribute('download', 'export.csv');
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+
+		// Clean up
+		URL.revokeObjectURL(url);
+
+		exporting = false;
+	}
 </script>
 
 <p>Import your data from the previous version of Cash Compass</p>
@@ -103,3 +143,11 @@
 {#if loading}
 	<p>Loading...</p>
 {/if}
+
+<button class="btn btn-primary" onclick={exportData} disabled={exporting}>
+	{#if exporting}
+		Exporting...
+	{:else}
+		Export Data
+	{/if}
+</button>

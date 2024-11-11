@@ -56,8 +56,8 @@
 	}
 </script>
 
-<li class="flex items-center justify-between">
-	<span class="flex items-center text-sm font-medium me-3 gap-1">
+<li class="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:flex-wrap p-2 ">
+	<div class="flex items-center text-sm font-medium me-3 gap-1">
 		<TransactionIcon />
 		<span>
 			<EditableField
@@ -70,7 +70,7 @@
 			value={transaction.label ?? 'Unknown'}
 			onSave={(value) => onLabelChange(value)}
 		/>
-	</span>
+	</div>
 	<div class="flex gap-1 items-center">
 		{#snippet accountPill()}
 			<AccountPill label={transaction.account?.label ?? 'Unknown'} />

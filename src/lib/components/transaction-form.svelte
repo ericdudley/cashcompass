@@ -1,17 +1,17 @@
 <script lang="ts">
+	import { BrowserStorage } from '$lib/browser-storage';
 	import CreateIcon from '$lib/components/ui/icons/create-icon.svelte';
 	import { getDbContext } from '$lib/context';
-	import { parseISO } from 'date-fns';
+	import type { Account } from '$lib/dexie/models/account';
+	import { asTransaction } from '$lib/dexie/models/transaction';
+	import { currentIso8601 } from '$lib/utils/date';
 	import { liveQuery } from 'dexie';
+	import { onMount } from 'svelte';
 	import ComboBox from './ui/combobox.svelte';
 	import CurrencyInput from './ui/currency-input.svelte';
 	import DateInput from './ui/date-input.svelte';
 	import MinusIcon from './ui/icons/minus-icon.svelte';
 	import PlusIcon from './ui/icons/plus-icon.svelte';
-	import { format } from 'date-fns';
-	import type { Account } from '$lib/dexie/models/account';
-	import { asTransaction, type TransactionInput } from '$lib/dexie/models/transaction';
-	import { currentIso8601 } from '$lib/utils/date';
 
 	let label = $state('');
 	let iso8601 = $state(currentIso8601());
@@ -32,6 +32,9 @@
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
+
+		// Save the last account id to local storage
+		BrowserStorage.from(localStorage).patchItem('localSettings', { lastAccountId: accountId });
 
 		const selectedCategory = await db.category.get(categoryId);
 		const selectedAccount = await db.account.get(accountId);
@@ -72,6 +75,14 @@
 		await db.account.add(newAccount);
 		return newAccount;
 	}
+
+	onMount(() => {
+		const lastAccountId = BrowserStorage.from(localStorage).getItem('localSettings')?.lastAccountId;
+
+		if (lastAccountId) {
+			accountId = lastAccountId;
+		}
+	});
 </script>
 
 <form class="flex flex-col gap-2" onsubmit={handleSubmit}>
@@ -99,16 +110,18 @@
 		<div class="join flex items-center mt-2">
 			<button
 				type="button"
-				class="btn btn-sm join-item flex-1 {isDebit ? 'btn-info' : ''}"
+				class="btn btn-xs join-item flex-1 {isDebit ? 'btn-info' : ''}"
 				onclick={() => (isDebit = true)}
+				tabindex={-1}
 			>
 				<MinusIcon />
 				<span>Debit</span>
 			</button>
 			<button
 				type="button"
-				class="btn btn-sm join-item flex-1 {!isDebit ? 'btn-info' : ''}"
+				class="btn btn-xs join-item flex-1 {!isDebit ? 'btn-info' : ''}"
 				onclick={() => (isDebit = false)}
+				tabindex={-1}
 			>
 				<PlusIcon />
 				<span>Credit</span>
@@ -153,7 +166,7 @@
 		/>
 	</div>
 
-	<button type="submit" class="btn btn-primary flex items-center gap-2">
+	<button type="submit" class="btn btn-primary flex items-center gap-2 mt-4">
 		<CreateIcon />
 		<span>Create Transaction</span>
 	</button>
