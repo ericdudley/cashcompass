@@ -44,6 +44,10 @@
 
 	// Watch for changes in value to update inputValue
 	$effect(() => {
+		if (value === '') {
+			inputValue = '';
+		}
+
 		const selectedItem = items.find((item: any) => item[valueProperty] === value);
 		if (selectedItem) {
 			inputValue = selectedItem[displayProperty] ?? '';

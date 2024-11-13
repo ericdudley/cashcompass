@@ -18,6 +18,12 @@
 	let currencySymbol = '$'; // default to USD TODO Support other currencies
 	let inputRef: HTMLInputElement;
 
+	$effect(() => {
+		if (value != null && !inputRef?.matches(':focus')) {
+			inputValue = currency(value, { symbol: currencySymbol, precision: 2 }).format();
+		}
+	});
+
 	onMount(() => {
 		// Focus the input if autofocus is true
 		if (autofocus && inputRef) {
@@ -68,6 +74,7 @@
 <input
 	class="input w-full input-bordered input-sm"
 	type="text"
+	pattern="\d*"
 	bind:value={inputValue}
 	oninput={onInput}
 	onblur={onBlur}
