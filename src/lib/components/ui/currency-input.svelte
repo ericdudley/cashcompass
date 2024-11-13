@@ -74,7 +74,7 @@
 <input
 	class="input w-full input-bordered input-sm"
 	type="text"
-	pattern="\d*"
+	inputmode="decimal"
 	bind:value={inputValue}
 	oninput={onInput}
 	onblur={onBlur}
