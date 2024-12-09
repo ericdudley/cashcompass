@@ -12,8 +12,8 @@
 	import { format, sub } from 'date-fns';
 
 	import DateRangeInput from '$lib/components/ui/date-range-input.svelte';
-	import { liveQuery } from 'dexie';
 	import { startOfMonth } from 'date-fns/startOfMonth';
+	import { liveQuery } from 'dexie';
 
 	const db = getDbContext();
 
@@ -54,7 +54,7 @@
 		liveQuery(() => db.tx.filter((tx) => tx.account?.accountType === 'net_worth').sortBy('iso8601'))
 	);
 	const netWorthDataValue = $derived.by(() => getNetWorthByMonth($netWorthTxs ?? []));
-	
+
 	// Prepare months, categories, and table data using $computed
 	const months = $derived.by(() => categoryMonthlyTotals?.months || []);
 	// FIXME Fix this type

@@ -36,6 +36,10 @@ export function initDb() {
 		requireAuth: true
 	});
 
+	// TODO Integrate this state into the UI
+	db.cloud.syncState.subscribe((state) => {
+		console.log('Sync state:', state);
+	});
 	// Ensure that all categories have a label
 	db.category.hook('creating', function (primKey, category, transaction) {
 		if (!category.label) {

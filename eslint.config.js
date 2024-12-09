@@ -27,6 +27,6 @@ export default tseslint.config(
 		}
 	},
 	{
-		ignores: ['build/', '.svelte-kit/', 'dist/', 'old-cash-compass/']
+		ignores: ['build/', '.svelte-kit/', 'dist/', 'old-cash-compass/', 'src-tauri/']
 	}
 );

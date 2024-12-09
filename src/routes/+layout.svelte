@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { onMount, setContext, type Snippet, type Component } from 'svelte';
-	import '../app.css';
-	import AppLogo from '$lib/components/ui/app-logo.svelte';
-	import { Routes } from '$lib/routes';
-	import { beforeNavigate } from '$app/navigation';
-	import HomeIcon from '$lib/components/ui/icons/home-icon.svelte';
-	import AccountIcon from '$lib/components/ui/icons/account-icon.svelte';
-	import TransactionIcon from '$lib/components/ui/icons/transaction-icon.svelte';
-	import CategoryIcon from '$lib/components/ui/icons/category-icon.svelte';
-	import MenuIcon from '$lib/components/ui/icons/menu-icon.svelte';
-	import { initDb } from '$lib/dexie';
 	import { browser } from '$app/environment';
+	import { beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
+	import AppLogo from '$lib/components/ui/app-logo.svelte';
+	import AccountIcon from '$lib/components/ui/icons/account-icon.svelte';
+	import CategoryIcon from '$lib/components/ui/icons/category-icon.svelte';
+	import HomeIcon from '$lib/components/ui/icons/home-icon.svelte';
+	import MenuIcon from '$lib/components/ui/icons/menu-icon.svelte';
+	import TransactionIcon from '$lib/components/ui/icons/transaction-icon.svelte';
 	import UserIcon from '$lib/components/ui/icons/user-icon.svelte';
+	import { initDb } from '$lib/dexie';
+	import { Routes } from '$lib/routes';
+	import { onMount, setContext, type Component, type Snippet } from 'svelte';
+	import '../app.css';
 
 	onMount(async () => {
 		const flowbite = await import('flowbite');

@@ -1,8 +1,7 @@
-import { ca } from 'date-fns/locale';
+import isEqual from 'lodash-es/isEqual';
 import { db } from '..';
 import type { Account } from '../models/account';
 import type { Category } from '../models/category';
-import isEqual from 'lodash-es/isEqual';
 
 export const UNKNOWN_LABELS = {
 	category: 'Uncategorized',

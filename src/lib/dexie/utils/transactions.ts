@@ -3,8 +3,25 @@ import { parseISO } from 'date-fns';
 import { liveQuery, type Observable } from 'dexie';
 import sortBy from 'lodash-es/sortBy';
 import { db } from '..';
-import type { Transaction } from '../models/transaction';
 import type { Account } from '../models/account';
+import type { Transaction } from '../models/transaction';
+
+type TransactionWithBalance = Transaction & { balance: number };
+
+export function getTransactionsWithBalances(transactions: Transaction[]): TransactionWithBalance[] {
+	const sorted = sortBy(transactions, 'iso8601');
+	let runningBalance = 0;
+
+	return sorted.map((tx) => {
+		runningBalance += tx.amount;
+		return { ...tx, balance: runningBalance };
+	});
+}
+
+export function getLatestBalance(transactions: Transaction[]): number {
+	const txWithBalances = getTransactionsWithBalances(transactions);
+	return txWithBalances.length ? txWithBalances[txWithBalances.length - 1].balance : 0;
+}
 
 export function searchLiveQuery({
 	startDate,
@@ -24,7 +41,7 @@ export function searchLiveQuery({
 			.and((tx) => (!!tx?.label?.startsWith && !!prefix ? tx.label.startsWith(prefix) : true))
 			.and(
 				(tx) =>
-					!!(!!accountType
+					!!(accountType
 						? tx.account?.accountType && tx.account.accountType === accountType
 						: true)
 			)
@@ -56,7 +73,6 @@ export function getPercentageDiffFromLastMonth(txs: Transaction[]): number {
 	const now = new Date();
 	const year = now.getFullYear();
 	const month = now.getMonth() + 1;
-	const currentYearMonth = year * 12 + month;
 
 	const monthlyTotals = getMonthlyTotals(txs);
 	const lastMonth = `${year}-${(month - 1).toString().padStart(2, '0')}`;
@@ -268,4 +284,8 @@ export function getCategoryMonthlyTotals(txs: Transaction[]): AggregatedData {
 		totalOverall,
 		averagePerCategory
 	};
+}
+
+export async function getTransactionsForAccount(accountId: string): Promise<Transaction[]> {
+	return db.tx.where('account.id').equals(accountId).toArray();
 }

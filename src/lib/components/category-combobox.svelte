@@ -3,10 +3,14 @@
 	import { liveQuery } from 'dexie';
 	import ComboBox from './ui/combobox.svelte';
 
-	let { value = $bindable(''), autofocus, onkeydown } = $props<{
+	let {
+		value = $bindable(''),
+		autofocus,
+		onkeydown
+	} = $props<{
 		value: string;
 		autofocus?: boolean;
-        onkeydown?: (event: KeyboardEvent) => void;
+		onkeydown?: (event: KeyboardEvent) => void;
 	}>();
 
 	const db = getDbContext();
@@ -28,6 +32,6 @@
 		placeholder="Select a category"
 		required
 		{autofocus}
-        {onkeydown}
+		{onkeydown}
 	/>
 </div>
