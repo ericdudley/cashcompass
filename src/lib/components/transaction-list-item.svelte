@@ -56,7 +56,7 @@
 	}
 </script>
 
-<li class="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:flex-wrap p-2 ">
+<li class="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:flex-wrap p-2">
 	<div class="flex items-center text-sm font-medium me-3 gap-1">
 		<TransactionIcon />
 		<span>

@@ -12,13 +12,15 @@
 	import DateInput from './ui/date-input.svelte';
 	import MinusIcon from './ui/icons/minus-icon.svelte';
 	import PlusIcon from './ui/icons/plus-icon.svelte';
+	import AccountIcon from './ui/icons/account-icon.svelte';
+	import { getLatestBalance, getTransactionsForAccount } from '$lib/dexie/utils/transactions';
 
 	let label = $state('');
 	let iso8601 = $state(currentIso8601());
 	let amount = $state(0);
 	let categoryId = $state('');
 	let accountId = $state('');
-	let isDebit = $state(true);
+	let transactionAmountType = $state<'debit' | 'credit' | 'reconcile'>('debit');
 
 	const db = getDbContext();
 
@@ -39,11 +41,18 @@
 		const selectedCategory = await db.category.get(categoryId);
 		const selectedAccount = await db.account.get(accountId);
 
+		let usedAmount = amount;
+		if (transactionAmountType === 'reconcile') {
+			const transactions = await getTransactionsForAccount(accountId);
+			const latestBalance = getLatestBalance(transactions);
+			usedAmount = amount - latestBalance;
+		}
+
 		await db.tx.add(
 			asTransaction({
 				id: crypto.randomUUID(),
 				label,
-				amount: isDebit ? -amount : amount,
+				amount: transactionAmountType === 'debit' ? -usedAmount : usedAmount,
 				category: selectedCategory!,
 				account: selectedAccount!,
 				iso8601
@@ -107,26 +116,6 @@
 			required
 			autofocus
 		/>
-		<div class="join flex items-center mt-2">
-			<button
-				type="button"
-				class="btn btn-xs join-item flex-1 {isDebit ? 'btn-info' : ''}"
-				onclick={() => (isDebit = true)}
-				tabindex={-1}
-			>
-				<MinusIcon />
-				<span>Debit</span>
-			</button>
-			<button
-				type="button"
-				class="btn btn-xs join-item flex-1 {!isDebit ? 'btn-info' : ''}"
-				onclick={() => (isDebit = false)}
-				tabindex={-1}
-			>
-				<PlusIcon />
-				<span>Credit</span>
-			</button>
-		</div>
 	</div>
 
 	<div class="form-control">
@@ -134,6 +123,51 @@
 			<span class="label-text">Amount</span>
 		</div>
 		<CurrencyInput bind:value={amount} />
+		<div class="join flex items-center mt-2">
+			<button
+				type="button"
+				class="btn btn-xs join-item flex-1 {transactionAmountType === 'debit' ? 'btn-info' : ''}"
+				onclick={() => {
+					transactionAmountType = 'debit';
+				}}
+				tabindex={-1}
+			>
+				<MinusIcon />
+				<span>Debit</span>
+			</button>
+
+			<button
+				type="button"
+				class="btn btn-xs join-item flex-1 {transactionAmountType === 'reconcile'
+					? 'btn-info'
+					: ''}"
+				onclick={() => {
+					// FIXME This is a nice helper, but it should probably be a user setting.
+					const reconciliationCategoryId = $categories?.find((category) =>
+						category?.label?.startsWith('Reconcil')
+					)?.id;
+					if (reconciliationCategoryId) {
+						categoryId = reconciliationCategoryId;
+					}
+					transactionAmountType = 'reconcile';
+				}}
+				tabindex={-1}
+			>
+				<AccountIcon />
+				<span>Reconcile</span>
+			</button>
+			<button
+				type="button"
+				class="btn btn-xs join-item flex-1 {transactionAmountType === 'credit' ? 'btn-info' : ''}"
+				onclick={() => {
+					transactionAmountType = 'credit';
+				}}
+				tabindex={-1}
+			>
+				<PlusIcon />
+				<span>Credit</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="form-control">
