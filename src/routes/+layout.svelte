@@ -42,6 +42,10 @@
 		children: Snippet;
 	} = $props();
 
+	let onSync = async () => {
+		await db.cloud.sync();
+	};
+
 	let onRefreshSession = () => {
 		db.cloud.login({});
 	};
@@ -104,6 +108,15 @@
 								</li>
 							{/snippet}
 							{@render menuItem({ route: Routes.settings, title: 'Settings' })}
+							<li>
+								<button
+									class="block w-full px-4 py-2 text-sm text-left hover:bg-primary-400"
+									role="menuitem"
+									onclick={onSync}
+								>
+									Sync
+								</button>
+							</li>
 							<li>
 								<button
 									class="block w-full px-4 py-2 text-sm text-left hover:bg-primary-400"
