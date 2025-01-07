@@ -9,7 +9,7 @@
 	import MenuIcon from '$lib/components/ui/icons/menu-icon.svelte';
 	import TransactionIcon from '$lib/components/ui/icons/transaction-icon.svelte';
 	import UserIcon from '$lib/components/ui/icons/user-icon.svelte';
-	import { initDb } from '$lib/dexie';
+	import { db, initDb } from '$lib/dexie';
 	import { Routes } from '$lib/routes';
 	import { onMount, setContext, type Component, type Snippet } from 'svelte';
 	import '../app.css';
@@ -41,6 +41,14 @@
 	}: {
 		children: Snippet;
 	} = $props();
+
+	let onRefreshSession = () => {
+		db.cloud.login({});
+	};
+
+	let onLogout = () => {
+		db.cloud.logout();
+	};
 </script>
 
 <nav class="fixed top-0 z-50 w-full bg-base-200 border-b border-base-200">
@@ -96,7 +104,24 @@
 								</li>
 							{/snippet}
 							{@render menuItem({ route: Routes.settings, title: 'Settings' })}
-							{@render menuItem({ route: '#', title: 'Sign out' })}
+							<li>
+								<button
+									class="block w-full px-4 py-2 text-sm text-left hover:bg-primary-400"
+									role="menuitem"
+									onclick={onRefreshSession}
+								>
+									Refresh session
+								</button>
+							</li>
+							<li>
+								<button
+									class="block w-full px-4 py-2 text-sm text-left hover:bg-primary-400"
+									role="menuitem"
+									onclick={onLogout}
+								>
+									Logout
+								</button>
+							</li>
 						</ul>
 					</div>
 				</div>

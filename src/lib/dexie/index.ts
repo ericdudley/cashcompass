@@ -78,7 +78,7 @@ export function initDb() {
 	});
 
 	db.tx.hook('creating', function (primKey, tx, transaction) {
-		tx.yyyyMMDd = tx.iso8601.slice(0, 10);
+		tx.yyyyMMDd = tx.iso8601?.slice(0, 10);
 	});
 	db.tx.hook('updating', function (mods: Partial<Transaction>, primKey, tx, transaction) {
 		if (mods.hasOwnProperty('iso8601') && typeof mods.iso8601 === 'string') {
