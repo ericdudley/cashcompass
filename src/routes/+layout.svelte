@@ -46,10 +46,6 @@
 		await db.cloud.sync();
 	};
 
-	let onRefreshSession = () => {
-		db.cloud.login({});
-	};
-
 	let onLogout = () => {
 		db.cloud.logout();
 	};
@@ -115,15 +111,6 @@
 									onclick={onSync}
 								>
 									Sync
-								</button>
-							</li>
-							<li>
-								<button
-									class="block w-full px-4 py-2 text-sm text-left hover:bg-primary-400"
-									role="menuitem"
-									onclick={onRefreshSession}
-								>
-									Refresh session
 								</button>
 							</li>
 							<li>
