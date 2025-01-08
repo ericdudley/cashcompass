@@ -99,9 +99,6 @@
 		<div class="label">
 			<span class="label-text">Date</span>
 		</div>
-		<p>
-			{iso8601}
-		</p>
 		<DateInput bind:value={iso8601} />
 	</div>
 

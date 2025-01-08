@@ -9,6 +9,10 @@
 		value = $bindable(''),
 		autofocus,
 		onkeydown
+	}: {
+		value: string | null;
+		autofocus?: boolean;
+		onkeydown?: (event: KeyboardEvent) => void;
 	} = $props();
 
 	let inputRef: HTMLInputElement | null = null;
@@ -71,38 +75,25 @@
 
 <div class="flex flex-col gap-1">
 	<div class="input-group flex-nowrap flex items-center gap-1">
-		<button
-			type="button"
-			class="btn btn-xs btn-square"
-			onclick={() => adjustDate(-1)}
-		>
+		<button type="button" class="btn btn-xs btn-square" onclick={() => adjustDate(-1)}>
 			<LeftIcon />
 		</button>
-		<span>{value}</span>
 		<input
 			bind:this={inputRef}
 			type="date"
 			class="input input-bordered input-sm"
 			bind:value={dateString}
 			oninput={onInput}
-			onkeydown={onkeydown}
+			{onkeydown}
 		/>
-		<button
-			type="button"
-			class="btn btn-xs btn-square"
-			onclick={() => adjustDate(1)}
-		>
+		<button type="button" class="btn btn-xs btn-square" onclick={() => adjustDate(1)}>
 			<RightIcon />
 		</button>
 	</div>
 
 	<div class="flex gap-2 mt-2 flex-nowrap">
 		{#snippet quickButton({ label, days }: { label: string; days: number })}
-			<button
-				type="button"
-				class="btn btn-xs btn-outline"
-				onclick={() => selectPastDay(days)}
-			>
+			<button type="button" class="btn btn-xs btn-outline" onclick={() => selectPastDay(days)}>
 				{label}
 			</button>
 		{/snippet}
