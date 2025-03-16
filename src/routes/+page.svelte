@@ -93,7 +93,7 @@
 	<div class="stat">
 		<div class="stat-title">Average Monthly</div>
 		<div class="stat-value">{formatAmount(averageMonthly ?? 0)}</div>
-		<div class="stat-desc">Excluding the current month</div>
+		<div class="stat-desc">{formatAmount((averageMonthly ?? 0) * 12)}</div>
 	</div>
 	<div class="stat">
 		<div class="stat-title">Net Worth</div>
