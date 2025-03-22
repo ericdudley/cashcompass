@@ -14,6 +14,7 @@
 	import DateRangeInput from '$lib/components/ui/date-range-input.svelte';
 	import { startOfMonth } from 'date-fns/startOfMonth';
 	import { liveQuery } from 'dexie';
+	import BarChart from '$lib/components/bar-chart.svelte';
 
 	const db = getDbContext();
 
@@ -77,6 +78,14 @@
 
 		return data;
 	});
+
+	const byMonthTotals = $derived.by(() => {
+		if (!categoryMonthlyTotals?.totalsPerMonth) return [];
+		return Object.entries(categoryMonthlyTotals.totalsPerMonth).map(([month, total]) => ({
+			month,
+			total: Math.abs(total)
+		}));
+	});
 </script>
 
 <DateRangeInput bind:startDate bind:endDate />
@@ -103,6 +112,10 @@
 </div>
 
 <h2 class="text-2xl font-bold my-4">Expenses</h2>
+<div>
+	<BarChart data={byMonthTotals} />
+</div>
+
 <div class="overflow-x-auto">
 	<table class="table table-zebra w-full">
 		<thead>
