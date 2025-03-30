@@ -75,7 +75,7 @@
 					<div>
 						<button
 							type="button"
-							class="flex text-sm rounded-full focus:ring-4 focus:ring-neutral-600 p-1 hover:bg-neutral"
+							class="flex text-sm rounded-full focus:ring-4 focus:ring-primary p-1 hover:bg-primary"
 							aria-expanded="false"
 							data-dropdown-toggle="dropdown-user"
 						>
@@ -149,10 +149,10 @@
 				<li>
 					<a
 						href={route}
-						class="flex items-center p-2 rounded-lg group hover:bg-primary-400 {(route === '/' &&
+						class="flex items-center p-2 rounded-lg group hover:text-base-content hover:bg-base-200 {(route === '/' &&
 							$page.route.id === route) ||
 						(route !== '/' && $page.route.id?.startsWith(route))
-							? 'bg-primary-700 text-primary-content'
+							? 'bg-primary text-primary-content'
 							: ''}"
 					>
 						<Icon class="w-5 h-5 transition duration-75" />
