@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getDbContext } from '$lib/context';
+	import { AccountUtils } from '$lib/dexie/models/account';
 	import { liveQuery } from 'dexie';
 	import ComboBox from './ui/combobox.svelte';
 
@@ -16,7 +17,8 @@
 	const db = getDbContext();
 
 	const accounts = $derived.by(() => {
-		return liveQuery(() => db.account.toArray());
+
+		return liveQuery(() => AccountUtils.getUnarchived(db).toArray());
 	});
 
 	console.log($accounts);

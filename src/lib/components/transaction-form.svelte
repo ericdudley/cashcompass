@@ -3,6 +3,7 @@
 	import CreateIcon from '$lib/components/ui/icons/create-icon.svelte';
 	import { getDbContext } from '$lib/context';
 	import type { Account } from '$lib/dexie/models/account';
+	import { AccountUtils } from '$lib/dexie/models/account';
 	import { asTransaction } from '$lib/dexie/models/transaction';
 	import { currentIso8601 } from '$lib/utils/date';
 	import { liveQuery } from 'dexie';
@@ -29,7 +30,7 @@
 	});
 
 	const accounts = $derived.by(() => {
-		return liveQuery(() => db.account.toArray());
+		return liveQuery(() => AccountUtils.getUnarchived(db).toArray());
 	});
 
 	async function handleSubmit(event: Event) {
@@ -79,7 +80,8 @@
 		const newAccount: Account = {
 			id: crypto.randomUUID(),
 			label: inputValue,
-			accountType: 'expenses'
+			accountType: 'expenses',
+			isArchived: 0
 		};
 		await db.account.add(newAccount);
 		return newAccount;

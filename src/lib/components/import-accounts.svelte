@@ -50,7 +50,8 @@
 								matchingAccount = {
 									id: crypto.randomUUID(),
 									label: accountLabel,
-									accountType: 'net_worth'
+									accountType: 'net_worth',
+									isArchived: 0
 								};
 								await db.account.add(matchingAccount);
 								existingAccounts.push(matchingAccount);
