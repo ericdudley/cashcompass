@@ -26,7 +26,15 @@ export function initDb() {
 	db.version(1).stores({
 		category: 'id, label',
 		tx: 'id, iso8601, yyyyMMDd, amount, category.id, category.label, label, account.id, account.accountType',
+		account: 'id, label, accountType'
+	});
+
+	db.version(2).stores({
 		account: 'id, label, accountType, isArchived'
+	}).upgrade(trans => {
+		return trans.table('account').toCollection().modify(account => {
+			account.isArchived = 0;
+		});
 	});
 
 	const isLocal = window.location.hostname === 'localhost';
