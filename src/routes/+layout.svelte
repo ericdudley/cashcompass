@@ -49,6 +49,8 @@
 	let onLogout = () => {
 		db.cloud.logout();
 	};
+
+	let userInfo = db?.cloud.currentUser;
 </script>
 
 <nav class="fixed top-0 z-50 w-full bg-base-200 border-b border-base-200">
@@ -88,8 +90,7 @@
 						id="dropdown-user"
 					>
 						<div class="px-4 py-3" role="none">
-							<p class="text-sm">Sims</p>
-							<p class="text-sm font-medium truncate" role="none">neil.sims@flowbite.com</p>
+							<p class="text-sm font-medium truncate" role="none">{$userInfo?.claims?.name}</p>
 						</div>
 						<ul class="py-1" role="none">
 							{#snippet menuItem({ route, title }: { route: string; title: string })}

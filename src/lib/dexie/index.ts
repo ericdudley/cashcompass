@@ -26,7 +26,7 @@ export function initDb() {
 	db.version(1).stores({
 		category: 'id, label',
 		tx: 'id, iso8601, yyyyMMDd, amount, category.id, category.label, label, account.id, account.accountType',
-		account: 'id, label, accountType'
+		account: 'id, label, accountType, isArchived'
 	});
 
 	const isLocal = window.location.hostname === 'localhost';
@@ -38,7 +38,7 @@ export function initDb() {
 
 	// TODO Integrate this state into the UI
 	db.cloud.syncState.subscribe((state) => {
-		console.log('Sync state:', state);
+		// console.log('Sync state:', state);
 	});
 	// Ensure that all categories have a label
 	db.category.hook('creating', function (primKey, category, transaction) {
