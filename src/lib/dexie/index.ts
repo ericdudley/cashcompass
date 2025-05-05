@@ -28,14 +28,9 @@ export function initDb() {
 		tx: 'id, iso8601, yyyyMMDd, amount, category.id, category.label, label, account.id, account.accountType',
 		account: 'id, label, accountType'
 	});
-
 	db.version(2).stores({
 		account: 'id, label, accountType, isArchived'
-	}).upgrade(trans => {
-		return trans.table('account').toCollection().modify(account => {
-			account.isArchived = 0;
-		});
-	});
+	})
 
 	const isLocal = window.location.hostname === 'localhost';
 	const databaseUrl = isLocal ? 'https://zosfaqgud.dexie.cloud' : 'https://zknh9tjsp.dexie.cloud';
@@ -44,10 +39,6 @@ export function initDb() {
 		requireAuth: true
 	});
 
-	// TODO Integrate this state into the UI
-	db.cloud.syncState.subscribe((state) => {
-		// console.log('Sync state:', state);
-	});
 	// Ensure that all categories have a label
 	db.category.hook('creating', function (primKey, category, transaction) {
 		if (!category.label) {
@@ -84,7 +75,11 @@ export function initDb() {
 			};
 		}
 	});
-
+	db.account.hook('reading', function (account: Partial<Account>): Account {
+		console.log(account)
+		account.isArchived = (account.isArchived === 0 || account.isArchived === 1) ? account.isArchived : 0;
+		return account as Account;
+	});
 	db.tx.hook('creating', function (primKey, tx, transaction) {
 		tx.yyyyMMDd = tx.iso8601?.slice(0, 10);
 	});
