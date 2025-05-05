@@ -8,6 +8,6 @@ export type Account = {
 };
 
 export const AccountUtils = {
-	getUnarchived: (db: CashCompassDexie) => db.account.where('isArchived').equals(0),
-	getArchived: (db: CashCompassDexie) => db.account.where('isArchived').notEqual(0),
+	getUnarchived: (db: CashCompassDexie) => db.account.filter(a => !a.isArchived),
+	getArchived: (db: CashCompassDexie) => db.account.filter(a => !!a.isArchived)
 };
