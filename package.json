@@ -1,8 +1,16 @@
 {
-	"name": "cash-compass",
+	"name": "cashcompass",
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
+		"docker:build": "docker build . -t ericdudley/cashcompass",
+		"docker:run": "docker run -p 8080:80 -d ericdudley/cashcompass",
+		"docker:login": "docker login",
+		"docker:stop": "docker stop $(docker ps -q --filter ancestor=ericdudley/cashcompass) || true",
+		"docker:clean": "docker rmi ericdudley/cashcompass || true",
+		"docker:full": "npm run docker:clean && npm run docker:build && npm run docker:run",
+		"docker:restart": "npm run docker:stop && npm run docker:run",
+		"docker:publish": "node scripts/docker-publish.js",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
