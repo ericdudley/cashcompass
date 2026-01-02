@@ -15,6 +15,7 @@
 	import { startOfMonth } from 'date-fns/startOfMonth';
 	import { liveQuery } from 'dexie';
 	import BarChart from '$lib/components/bar-chart.svelte';
+	import LineChart from '$lib/components/line-chart.svelte';
 
 	const db = getDbContext();
 
@@ -145,6 +146,9 @@
 
 {#if netWorthDataValue}
 	<h2 class="text-2xl font-bold my-4">Net Worth</h2>
+	<div class="my-4">
+		<LineChart data={netWorthDataValue.data} months={netWorthDataValue.months} />
+	</div>
 	<div class="overflow-x-auto">
 		<table class="table table-zebra w-full">
 			<thead>

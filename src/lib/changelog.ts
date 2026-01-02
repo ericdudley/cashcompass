@@ -6,6 +6,11 @@ export type ChangelogEntry = {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        semver: '0.0.3',
+        releaseNotes: 'Added account values over time graph to the dashboard.',
+        date: '2025-12-15'
+    },
+    {
         semver: '0.0.2',
         releaseNotes: 'Upgraded all dependencies to latest versions.',
         date: '2025-11-08'
