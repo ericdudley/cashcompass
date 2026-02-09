@@ -26,27 +26,33 @@ export function getLatestBalance(transactions: Transaction[]): number {
 export function searchLiveQuery({
 	startDate,
 	endDate,
-	prefix,
-	accountType
+	searchTerm,
+	accountType,
+	categoryIds
 }: {
 	startDate: Date;
 	endDate: Date;
-	prefix?: string;
+	searchTerm?: string;
 	accountType?: Account['accountType'];
+	categoryIds?: string[];
 }): Observable<Transaction[]> {
-	return liveQuery(() =>
-		db.tx
+	return liveQuery(() => {
+		const categoryIdSet = categoryIds && categoryIds.length > 0 ? new Set(categoryIds) : null;
+		const normalizedSearch = searchTerm?.toLowerCase().trim();
+
+		return db.tx
 			.where('yyyyMMDd')
 			.between(formatYyyyMMDd(startDate), formatYyyyMMDd(endDate), true, true)
-			.and((tx) => (!!tx?.label?.startsWith && !!prefix ? tx.label.startsWith(prefix) : true))
+			.and((tx) =>
+				normalizedSearch && tx?.label ? tx.label.toLowerCase().includes(normalizedSearch) : true
+			)
 			.and(
 				(tx) =>
-					!!(accountType
-						? tx.account?.accountType && tx.account.accountType === accountType
-						: true)
+					!!(accountType ? tx.account?.accountType && tx.account.accountType === accountType : true)
 			)
-			.sortBy('iso8601')
-	);
+			.and((tx) => (categoryIdSet ? !!tx.category?.id && categoryIdSet.has(tx.category.id) : true))
+			.sortBy('iso8601');
+	});
 }
 
 function getMonthlyTotals(txs: Transaction[]): { [month: string]: number } {

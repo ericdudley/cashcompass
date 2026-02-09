@@ -1,28 +1,36 @@
 <script lang="ts">
 	import { getDbContext } from '$lib/context';
-	import { endOfDay, format, startOfDay, subDays } from 'date-fns';
+	import { subDays } from 'date-fns';
 	import { liveQuery } from 'dexie';
 	import GroupedTransactionList from './grouped-transaction-list.svelte';
 	import DateRangeInput from './ui/date-range-input.svelte';
 	import LoadingStatus from './ui/loading-status.svelte';
 	import { searchLiveQuery } from '$lib/dexie/utils/transactions';
+	import PillMultiSelect from './ui/pill-multi-select.svelte';
 
 	const db = getDbContext();
 
 	let startDate = $state(subDays(new Date(), 30));
 	let endDate = $state(new Date());
-	let prefix = $state('');
+	let searchTerm = $state('');
+	let selectedCategoryIds = $state<string[]>([]);
+
+	const categories = $derived.by(() => {
+		return liveQuery(() => db.category.toArray());
+	});
 
 	let txs = $derived.by(() => {
 		// noop just to make it reactive
-		prefix;
+		searchTerm;
 		startDate;
 		endDate;
+		selectedCategoryIds;
 
 		return searchLiveQuery({
 			startDate,
 			endDate,
-			prefix
+			searchTerm,
+			categoryIds: selectedCategoryIds
 		});
 	});
 </script>
@@ -32,11 +40,20 @@
 	<div class="form-control">
 		<input
 			type="text"
-			placeholder="Filter by label"
+			placeholder="Search transactions..."
 			class="input input-bordered"
-			bind:value={prefix}
+			bind:value={searchTerm}
 		/>
 	</div>
+	{#if $categories}
+		<PillMultiSelect
+			items={$categories}
+			bind:selectedIds={selectedCategoryIds}
+			displayProperty="label"
+			valueProperty="id"
+			label="Filter by categories"
+		/>
+	{/if}
 	<LoadingStatus items={$txs} label="transactions" />
 	{#if $txs}
 		<GroupedTransactionList txs={$txs} />

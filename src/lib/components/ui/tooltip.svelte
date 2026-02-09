@@ -4,4 +4,4 @@
 
 <div class="tooltip" data-tip={tip}>
 	{@render children()}
-</div> 
+</div>

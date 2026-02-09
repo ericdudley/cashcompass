@@ -30,7 +30,7 @@ export function initDb() {
 	});
 	db.version(2).stores({
 		account: 'id, label, accountType, isArchived'
-	})
+	});
 
 	const isLocal = window.location.hostname === 'localhost';
 	const databaseUrl = isLocal ? 'https://zosfaqgud.dexie.cloud' : 'https://zknh9tjsp.dexie.cloud';
@@ -76,8 +76,9 @@ export function initDb() {
 		}
 	});
 	db.account.hook('reading', function (account: Partial<Account>): Account {
-		console.log(account)
-		account.isArchived = (account.isArchived === 0 || account.isArchived === 1) ? account.isArchived : 0;
+		console.log(account);
+		account.isArchived =
+			account.isArchived === 0 || account.isArchived === 1 ? account.isArchived : 0;
 		return account as Account;
 	});
 	db.tx.hook('creating', function (primKey, tx, transaction) {

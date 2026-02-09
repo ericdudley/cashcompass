@@ -3,4 +3,3 @@ trigger: manual
 glob:
 description:
 ---
-

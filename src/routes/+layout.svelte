@@ -150,7 +150,8 @@
 				<li>
 					<a
 						href={route}
-						class="flex items-center p-2 rounded-lg group hover:text-base-content hover:bg-base-200 {(route === '/' &&
+						class="flex items-center p-2 rounded-lg group hover:text-base-content hover:bg-base-200 {(route ===
+							'/' &&
 							$page.route.id === route) ||
 						(route !== '/' && $page.route.id?.startsWith(route))
 							? 'bg-primary text-primary-content'

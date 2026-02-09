@@ -7,11 +7,11 @@
 	const db = getDbContext();
 
 	async function handleSubmit() {
-		await db.account.add({ 
-			id: crypto.randomUUID(), 
-			label, 
+		await db.account.add({
+			id: crypto.randomUUID(),
+			label,
 			accountType: 'net_worth',
-			isArchived: 0 
+			isArchived: 0
 		});
 		label = '';
 	}

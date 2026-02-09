@@ -50,7 +50,13 @@
 	let yMax = $derived(Math.ceil(maxValue / 1000) * 1000 || 1000);
 
 	// Create tick values for y-axis
-	let yTicks = $derived([yMin, yMin + (yMax - yMin) * 0.25, yMin + (yMax - yMin) * 0.5, yMin + (yMax - yMin) * 0.75, yMax]);
+	let yTicks = $derived([
+		yMin,
+		yMin + (yMax - yMin) * 0.25,
+		yMin + (yMax - yMin) * 0.5,
+		yMin + (yMax - yMin) * 0.75,
+		yMax
+	]);
 
 	// Set up scales
 	let xScale = $derived(
@@ -163,4 +169,3 @@
 		font-size: 0.7em;
 	}
 </style>
-

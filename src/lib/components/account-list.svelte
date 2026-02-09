@@ -23,8 +23,8 @@
 		);
 	});
 
-	let activeAccounts = $derived($accounts?.filter(account => account.isArchived === 0) ?? []);
-	let archivedAccounts = $derived($accounts?.filter(account => account.isArchived === 1) ?? []);
+	let activeAccounts = $derived($accounts?.filter((account) => account.isArchived === 0) ?? []);
+	let archivedAccounts = $derived($accounts?.filter((account) => account.isArchived === 1) ?? []);
 
 	async function onLabelChange(id: string, label: string) {
 		// Update all transactions that reference this account

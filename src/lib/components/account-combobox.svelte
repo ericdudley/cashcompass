@@ -17,7 +17,6 @@
 	const db = getDbContext();
 
 	const accounts = $derived.by(() => {
-
 		return liveQuery(() => AccountUtils.getUnarchived(db).toArray());
 	});
 

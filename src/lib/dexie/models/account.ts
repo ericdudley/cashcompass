@@ -1,4 +1,4 @@
-import type { CashCompassDexie } from "..";
+import type { CashCompassDexie } from '..';
 
 export type Account = {
 	id: string;
@@ -8,6 +8,6 @@ export type Account = {
 };
 
 export const AccountUtils = {
-	getUnarchived: (db: CashCompassDexie) => db.account.filter(a => !a.isArchived),
-	getArchived: (db: CashCompassDexie) => db.account.filter(a => !!a.isArchived)
+	getUnarchived: (db: CashCompassDexie) => db.account.filter((a) => !a.isArchived),
+	getArchived: (db: CashCompassDexie) => db.account.filter((a) => !!a.isArchived)
 };
