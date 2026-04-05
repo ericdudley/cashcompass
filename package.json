@@ -1,6 +1,6 @@
 {
 	"name": "cashcompass",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"private": true,
 	"scripts": {
 		"docker:build": "docker build . -t ericdudley/cashcompass",
