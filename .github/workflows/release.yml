@@ -29,9 +29,9 @@ jobs:
         run: |
           make docker-build-server DOCKER_TAG=${{ steps.tag.outputs.TAG }}
           make docker-push-server  DOCKER_TAG=${{ steps.tag.outputs.TAG }}
-          docker tag ghcr.io/ericdudley/cashcompass-server:${{ steps.tag.outputs.TAG }} \
-                     ghcr.io/ericdudley/cashcompass-server:latest
-          docker push ghcr.io/ericdudley/cashcompass-server:latest
+          docker tag ghcr.io/ericdudley/cashcompass:${{ steps.tag.outputs.TAG }} \
+                     ghcr.io/ericdudley/cashcompass:latest
+          docker push ghcr.io/ericdudley/cashcompass:latest
 
       - uses: softprops/action-gh-release@v2
         with:

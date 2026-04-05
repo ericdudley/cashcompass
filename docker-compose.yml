@@ -1,6 +1,6 @@
 services:
   server:
-    image: ghcr.io/ericdudley/cashcompass-server:latest
+    image: ghcr.io/ericdudley/cashcompass:latest
     restart: unless-stopped
     ports:
       - "8080:8080"

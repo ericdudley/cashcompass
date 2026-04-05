@@ -1,6 +1,6 @@
 .PHONY: dev test-go test-e2e test docker-build-server docker-push-server
 
-DOCKER_IMAGE := ghcr.io/ericdudley/cashcompass-server
+DOCKER_IMAGE := ghcr.io/ericdudley/cashcompass
 DOCKER_TAG   ?= latest
 
 dev:
