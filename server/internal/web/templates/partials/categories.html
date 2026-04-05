@@ -1,0 +1,11 @@
+{{ define "categories-list" }}
+<div id="category-list" data-testid="categories" class="grid gap-3 md:grid-cols-2">
+  {{ range . }}
+    {{ template "category-card" . }}
+  {{ else }}
+  <div class="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+    No categories yet.
+  </div>
+  {{ end }}
+</div>
+{{ end }}

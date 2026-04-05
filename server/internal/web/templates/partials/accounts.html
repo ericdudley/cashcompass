@@ -1,0 +1,27 @@
+{{ define "accounts-list" }}
+<div id="account-list" class="flex flex-col gap-8">
+  <section data-testid="active-accounts">
+    <h2 class="mb-3 text-lg font-semibold text-slate-200">Active</h2>
+    <div class="grid gap-3 md:grid-cols-2">
+      {{ range .Active }}
+        {{ template "account-card" . }}
+      {{ else }}
+      <div class="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+        No active accounts.
+      </div>
+      {{ end }}
+    </div>
+  </section>
+
+  {{ if .Archived }}
+  <section data-testid="archived-accounts">
+    <h2 class="mb-3 text-lg font-semibold text-slate-400">Archived</h2>
+    <div class="grid gap-3 md:grid-cols-2">
+      {{ range .Archived }}
+        {{ template "account-card" . }}
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,87 @@
+{{ define "transactions-list" }}
+<div id="transaction-list" data-testid="transaction-list">
+  <!-- Mode Toggle -->
+  {{ $mode := .Filter.AccountType }}
+  <div class="flex gap-1 mb-4">
+    <a href="/transactions?account_type=expenses{{ if .Filter.DatePreset }}&date_preset={{ .Filter.DatePreset }}{{ end }}{{ if .Filter.Label }}&label={{ .Filter.Label }}{{ end }}"
+       class="px-4 py-1.5 rounded text-sm font-medium {{ if eq $mode "expenses" }}bg-amber-500 text-white{{ else }}bg-slate-700 text-slate-300 hover:bg-slate-600{{ end }}">
+      Expenses
+    </a>
+    <a href="/transactions?account_type=net_worth{{ if .Filter.DatePreset }}&date_preset={{ .Filter.DatePreset }}{{ end }}{{ if .Filter.Label }}&label={{ .Filter.Label }}{{ end }}"
+       class="px-4 py-1.5 rounded text-sm font-medium {{ if eq $mode "net_worth" }}bg-emerald-500 text-white{{ else }}bg-slate-700 text-slate-300 hover:bg-slate-600{{ end }}">
+      Net Worth
+    </a>
+  </div>
+
+  <!-- Filter Bar -->
+  <form id="transaction-filters"
+    hx-get="/partials/transactions"
+    hx-trigger="change, keyup changed delay:300ms from:#label-search"
+    hx-target="#transaction-list"
+    hx-swap="outerHTML"
+    class="rounded-xl border border-slate-800 bg-slate-900/70 p-4 mb-4">
+
+    <!-- Preserve mode across HTMX filter requests -->
+    <input type="hidden" name="account_type" value="{{ .Filter.AccountType }}" />
+
+    <div class="flex flex-wrap gap-2 mb-3">
+      {{ $fp := .Filter.DatePreset }}
+      {{ range $preset := presetOptions }}
+      <button type="button"
+        hx-get="/partials/transactions"
+        hx-vals='{"date_preset":"{{ $preset.Value }}"}'
+        hx-include="#transaction-filters"
+        hx-target="#transaction-list"
+        hx-swap="outerHTML"
+        class="text-xs px-3 py-1 rounded-full border {{ if eq $fp $preset.Value }}bg-emerald-600 text-white border-emerald-600{{ else }}bg-slate-800 text-slate-400 border-slate-600 hover:border-emerald-400/50{{ end }}">
+        {{ $preset.Label }}
+      </button>
+      {{ end }}
+    </div>
+
+    <div class="flex flex-wrap gap-3 items-center">
+      <input type="text" name="label" id="label-search" value="{{ .Filter.Label }}"
+        placeholder="Search label..."
+        class="text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1 flex-1 min-w-40" />
+
+      <!-- Category pills -->
+      <div class="flex flex-wrap gap-1">
+        {{ range .Categories }}
+        <label class="cursor-pointer">
+          <input type="checkbox" name="category_id" value="{{ .ID }}" class="sr-only"
+            {{ if isSelected $.Filter.CategoryIDs .ID }}checked{{ end }} />
+          <span class="text-xs px-2 py-1 rounded-full border transition-colors
+            {{ if isSelected $.Filter.CategoryIDs .ID }}bg-emerald-600 text-white border-emerald-600{{ else }}bg-slate-800 text-slate-400 border-slate-600 hover:border-emerald-400/50{{ end }}">
+            {{ .Label }}
+          </span>
+        </label>
+        {{ end }}
+      </div>
+    </div>
+  </form>
+
+  <!-- Transaction Groups -->
+  <div class="flex flex-col gap-6">
+    {{ if not .Groups }}
+    <div class="rounded-xl border border-dashed border-slate-700 p-6 text-sm text-slate-400">
+      No transactions found.
+    </div>
+    {{ end }}
+    {{ range .Groups }}
+    <section>
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ fmtDate .Date }}</h2>
+        <span class="text-xs font-mono {{ if lt .Subtotal 0 }}text-red-400{{ else }}text-emerald-400{{ end }}">
+          {{ formatCents .Subtotal }}
+        </span>
+      </div>
+      <div class="flex flex-col divide-y divide-slate-800 rounded-xl border border-slate-800 bg-slate-900/50">
+        {{ range .Transactions }}
+          {{ template "transaction-row" . }}
+        {{ end }}
+      </div>
+    </section>
+    {{ end }}
+  </div>
+</div>
+{{ end }}

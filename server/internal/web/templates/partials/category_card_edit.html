@@ -1,0 +1,32 @@
+{{ define "category-card-edit" }}
+<div
+  id="category-{{ .ID }}"
+  data-label="{{ .Label }}"
+  data-testid="category-card"
+  class="rounded-xl border border-emerald-400/40 bg-slate-900/70 p-4 flex flex-col gap-3"
+>
+  <input
+    type="text"
+    id="label-{{ .ID }}"
+    name="label"
+    value="{{ .Label }}"
+    autofocus
+    class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+  />
+  <div class="flex gap-2">
+    <button
+      class="rounded px-3 py-1.5 text-xs font-semibold bg-emerald-400 text-slate-950 hover:bg-emerald-300 transition"
+      hx-put="/categories/{{ .ID }}/label"
+      hx-include="#label-{{ .ID }}"
+      hx-target="#category-{{ .ID }}"
+      hx-swap="outerHTML"
+    >Save</button>
+    <button
+      class="rounded px-3 py-1.5 text-xs text-slate-400 border border-slate-700 hover:text-slate-100 transition"
+      hx-get="/partials/categories/{{ .ID }}"
+      hx-target="#category-{{ .ID }}"
+      hx-swap="outerHTML"
+    >Cancel</button>
+  </div>
+</div>
+{{ end }}

@@ -22,6 +22,7 @@
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
+		"test:server": "rm -f /tmp/cashcompass_test.db && playwright test --config playwright.server.config.ts --reporter=list",
 		"tauri": "tauri"
 	},
 	"devDependencies": {

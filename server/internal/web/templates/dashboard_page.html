@@ -1,0 +1,145 @@
+{{ define "dashboard-page" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard – Cash Compass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    {{ template "nav" "dashboard" }}
+    <main class="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-20 pb-12">
+
+      <header class="space-y-2">
+        <p class="text-sm uppercase tracking-[0.3em] text-emerald-300/70">Server edition</p>
+        <h1 class="text-4xl font-semibold text-white">Dashboard</h1>
+      </header>
+
+      <!-- Summary stats -->
+      <section data-testid="summary-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div data-testid="stat-this-month" class="rounded-xl bg-slate-800/60 p-4 space-y-1">
+          <p class="text-xs uppercase tracking-wider text-slate-400">This Month</p>
+          <p class="text-2xl font-semibold text-white">{{ .ThisMonthExpenses }}</p>
+          {{ if .ExpenseChangePct }}
+          <p class="text-xs {{ if .ExpenseChangePos }}text-emerald-400{{ else }}text-rose-400{{ end }}">{{ .ExpenseChangePct }} vs last month</p>
+          {{ end }}
+        </div>
+        <div class="rounded-xl bg-slate-800/60 p-4 space-y-1">
+          <p class="text-xs uppercase tracking-wider text-slate-400">Monthly Avg</p>
+          <p class="text-2xl font-semibold text-white">{{ .AvgMonthlyExpenses }}</p>
+          <p class="text-xs text-slate-500">full months only</p>
+        </div>
+        <div class="rounded-xl bg-slate-800/60 p-4 space-y-1 col-span-2">
+          <p class="text-xs uppercase tracking-wider text-slate-400">Net Worth</p>
+          <p class="text-2xl font-semibold text-white">{{ .CurrentNetWorth }}</p>
+        </div>
+      </section>
+
+      <!-- Expenses section -->
+      <section data-testid="expenses-section" class="space-y-4">
+        <h2 class="text-xl font-semibold text-white">Expenses</h2>
+
+        {{ if .ExpenseBars }}
+        <div class="rounded-xl bg-slate-800/60 p-4">
+          <div class="flex items-end gap-1 h-36">
+            {{ range .ExpenseBars }}
+            <div class="group flex-1 flex flex-col items-end justify-end relative h-full">
+              <span class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-xs text-slate-200 bg-slate-700 rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">{{ .AmtFmt }}</span>
+              <div class="w-full bg-emerald-500/70 hover:bg-emerald-400 rounded-t transition-colors" style="{{ .HeightStyle }}"></div>
+            </div>
+            {{ end }}
+          </div>
+          <div class="flex gap-1 mt-1">
+            {{ range .ExpenseMonths }}
+            <div class="flex-1 text-center text-xs text-slate-500 truncate">{{ . }}</div>
+            {{ end }}
+          </div>
+        </div>
+
+        {{ if .CatMonthRows }}
+        <div class="overflow-x-auto rounded-xl bg-slate-800/60">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700">
+                <th class="px-4 py-2 text-left font-medium text-slate-400">Category</th>
+                {{ range .CatMonths }}<th class="px-3 py-2 text-right font-medium text-slate-400">{{ . }}</th>{{ end }}
+                <th class="px-4 py-2 text-right font-medium text-slate-400">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{ range .CatMonthRows }}
+              <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                <td class="px-4 py-2 text-slate-200">{{ .Category }}</td>
+                {{ range .Totals }}<td class="px-3 py-2 text-right text-slate-300">{{ . }}</td>{{ end }}
+                <td class="px-4 py-2 text-right font-medium text-slate-100">{{ .Total }}</td>
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </div>
+        {{ end }}
+
+        {{ else }}
+        <p class="text-slate-500 text-sm">No expense data yet. Add some transactions to see your spending trends.</p>
+        {{ end }}
+      </section>
+
+      <!-- Net worth section -->
+      <section data-testid="net-worth-section" class="space-y-4">
+        <h2 class="text-xl font-semibold text-white">Net Worth</h2>
+
+        {{ if .NetWorthLines }}
+        <div class="rounded-xl bg-slate-800/60 p-4">
+          <svg viewBox="0 0 400 150" class="w-full h-40" preserveAspectRatio="none">
+            {{ range .NetWorthLines }}
+            <polyline
+              points="{{ .Points }}"
+              fill="none"
+              stroke="{{ .Color }}"
+              stroke-width="2"
+              vector-effect="non-scaling-stroke"
+            />
+            {{ end }}
+          </svg>
+          <div class="flex flex-wrap gap-4 mt-2">
+            {{ range .NetWorthLines }}
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block h-2 w-5 rounded" style="background:{{ .Color }}"></span>
+              <span class="text-xs text-slate-400">{{ .Label }}</span>
+            </div>
+            {{ end }}
+          </div>
+        </div>
+        {{ end }}
+
+        {{ if .NetWorthTableRows }}
+        <div class="overflow-x-auto rounded-xl bg-slate-800/60">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700">
+                <th class="px-4 py-2 text-left font-medium text-slate-400">Account</th>
+                {{ range .NetWorthMonths }}<th class="px-3 py-2 text-right font-medium text-slate-400">{{ . }}</th>{{ end }}
+              </tr>
+            </thead>
+            <tbody>
+              {{ range .NetWorthTableRows }}
+              <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                <td class="px-4 py-2 text-slate-200">{{ .Label }}</td>
+                {{ range .Balances }}<td class="px-3 py-2 text-right text-slate-300">{{ . }}</td>{{ end }}
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </div>
+        {{ else }}
+        <p class="text-slate-500 text-sm">No net worth data yet. Import account balances or add net worth transactions.</p>
+        {{ end }}
+      </section>
+
+    </main>
+  </body>
+</html>
+{{ end }}

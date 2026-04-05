@@ -1,0 +1,42 @@
+{{ define "transaction-row-edit" }}
+<div id="transaction-{{ .Transaction.ID }}" data-testid="transaction-row-edit" class="flex items-center gap-2 px-4 py-3 border-b border-emerald-400/20 bg-slate-800/70">
+  <input type="date" name="date" value="{{ isoDateValue .Transaction.Date }}"
+    class="w-32 text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1" />
+  <input type="text" name="label" value="{{ .Transaction.Label }}"
+    class="flex-1 text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1" />
+  <div class="flex items-center gap-1">
+    <input type="number" name="amount" value="{{ centsToDecimal .Transaction.Amount }}" step="0.01" min="0"
+      class="w-24 text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1" />
+    <select name="amount_mode" class="text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1">
+      <option value="debit" {{ if lt .Transaction.Amount 0 }}selected{{ end }}>Debit</option>
+      <option value="credit" {{ if ge .Transaction.Amount 0 }}selected{{ end }}>Credit</option>
+    </select>
+  </div>
+  <select name="account_id" class="w-32 text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1">
+    {{ range .Accounts }}
+    <option value="{{ .ID }}" {{ if eq .ID (derefInt $.Transaction.AccountID) }}selected{{ end }}>{{ .Label }}</option>
+    {{ end }}
+  </select>
+  <select name="category_id" class="w-28 text-sm bg-slate-900 border border-slate-600 text-slate-100 rounded px-2 py-1">
+    <option value="0">None</option>
+    {{ range .Categories }}
+    <option value="{{ .ID }}" {{ if eq .ID (derefInt $.Transaction.CategoryID) }}selected{{ end }}>{{ .Label }}</option>
+    {{ end }}
+  </select>
+  <button
+    hx-put="/transactions/{{ .Transaction.ID }}"
+    hx-include="#transaction-{{ .Transaction.ID }} input, #transaction-{{ .Transaction.ID }} select"
+    hx-target="#transaction-{{ .Transaction.ID }}"
+    hx-swap="outerHTML"
+    class="text-xs px-2 py-1 bg-emerald-900/50 text-emerald-400 rounded hover:bg-emerald-900">
+    Save
+  </button>
+  <button
+    hx-get="/partials/transactions/{{ .Transaction.ID }}"
+    hx-target="#transaction-{{ .Transaction.ID }}"
+    hx-swap="outerHTML"
+    class="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded hover:bg-slate-600">
+    Cancel
+  </button>
+</div>
+{{ end }}

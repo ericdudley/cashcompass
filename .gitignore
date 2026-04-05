@@ -28,3 +28,12 @@ dexie-cloud.key
 dexie-cloud.json
 
 project.pbxproj
+
+*.db
+
+# Go server
+/server/data/
+/server/cashcompass-server
+
+# Playwright
+/test-results/

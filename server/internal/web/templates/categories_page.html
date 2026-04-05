@@ -1,0 +1,26 @@
+{{ define "categories-page" }}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Categories – Cash Compass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    {{ template "nav" "categories" }}
+    <main class="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-20 pb-12">
+      <header class="space-y-2">
+        <p class="text-sm uppercase tracking-[0.3em] text-emerald-300/70">Server edition</p>
+        <h1 class="text-4xl font-semibold text-white">Categories</h1>
+      </header>
+
+      {{ template "category-form" . }}
+
+      {{ template "categories-list" . }}
+    </main>
+  </body>
+</html>
+{{ end }}

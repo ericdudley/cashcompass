@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  docker-release:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract tag
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        run: |
+          make docker-build-server DOCKER_TAG=${{ steps.tag.outputs.TAG }}
+          make docker-push-server  DOCKER_TAG=${{ steps.tag.outputs.TAG }}
+          docker tag ghcr.io/ericdudley/cashcompass-server:${{ steps.tag.outputs.TAG }} \
+                     ghcr.io/ericdudley/cashcompass-server:latest
+          docker push ghcr.io/ericdudley/cashcompass-server:latest
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

@@ -1,0 +1,8 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+}

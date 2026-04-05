@@ -1,0 +1,29 @@
+{{ define "nav" }}
+<nav class="fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-6 h-14">
+    <!-- Brand -->
+    <a href="/" class="text-sm font-semibold text-white tracking-wide">Cash Compass</a>
+
+    <!-- Desktop links -->
+    <div class="hidden md:flex items-center gap-6 text-sm">
+      <a href="/dashboard" class="{{ if eq . `dashboard` }}text-emerald-400 font-semibold{{ else }}text-slate-400 hover:text-slate-100{{ end }}">Dashboard</a>
+      <a href="/accounts" class="{{ if eq . `accounts` }}text-emerald-400 font-semibold{{ else }}text-slate-400 hover:text-slate-100{{ end }}">Accounts</a>
+      <a href="/categories" class="{{ if eq . `categories` }}text-emerald-400 font-semibold{{ else }}text-slate-400 hover:text-slate-100{{ end }}">Categories</a>
+      <a href="/transactions" class="{{ if eq . `transactions` }}text-emerald-400 font-semibold{{ else }}text-slate-400 hover:text-slate-100{{ end }}">Transactions</a>
+      <a href="/settings" class="{{ if eq . `settings` }}text-emerald-400 font-semibold{{ else }}text-slate-400 hover:text-slate-100{{ end }}">Settings</a>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button class="md:hidden text-slate-400 text-xl" onclick="document.getElementById('mobile-nav').classList.toggle('hidden')">&#9776;</button>
+  </div>
+
+  <!-- Mobile drawer -->
+  <div id="mobile-nav" class="hidden md:hidden bg-slate-900 border-t border-slate-800 px-6 py-3 flex flex-col gap-3 text-sm">
+    <a href="/dashboard" class="{{ if eq . `dashboard` }}text-emerald-400 font-semibold{{ else }}text-slate-400{{ end }}">Dashboard</a>
+    <a href="/accounts" class="{{ if eq . `accounts` }}text-emerald-400 font-semibold{{ else }}text-slate-400{{ end }}">Accounts</a>
+    <a href="/categories" class="{{ if eq . `categories` }}text-emerald-400 font-semibold{{ else }}text-slate-400{{ end }}">Categories</a>
+    <a href="/transactions" class="{{ if eq . `transactions` }}text-emerald-400 font-semibold{{ else }}text-slate-400{{ end }}">Transactions</a>
+    <a href="/settings" class="{{ if eq . `settings` }}text-emerald-400 font-semibold{{ else }}text-slate-400{{ end }}">Settings</a>
+  </div>
+</nav>
+{{ end }}
