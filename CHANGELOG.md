@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/ericdudley/cashcompass/compare/v0.1.0...v0.1.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* Trigger release ([#6](https://github.com/ericdudley/cashcompass/issues/6)) ([08bda97](https://github.com/ericdudley/cashcompass/commit/08bda972917524ad8828fcf25e2924958fae1982))
+
 ## [0.1.0](https://github.com/ericdudley/cashcompass/compare/v0.0.3...v0.1.0) (2026-04-06)
 
 
