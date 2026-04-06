@@ -54,9 +54,7 @@ func (h *SettingsHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 	if c := r.URL.Query().Get("count"); c != "" {
 		data.ImportedCount, _ = strconv.Atoi(c)
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "settings-page", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderPage(w, h.tmpl, "settings", "Settings", "10", "settings-content", data)
 }
 
 // parseAmount strips "$" and "," then returns cents (positive float input → positive cents).

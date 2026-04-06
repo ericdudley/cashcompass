@@ -1,25 +1,8 @@
-{{ define "transactions-page" }}
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Transactions – Cash Compass</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/app.css" />
-  </head>
-  <body class="min-h-screen bg-slate-950 text-slate-100">
-    {{ template "nav" "transactions" }}
-    <main class="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 pt-20 pb-12">
-      <header class="space-y-2">
-        <p class="text-sm uppercase tracking-[0.3em] text-emerald-300/70">Server edition</p>
-        <h1 class="text-4xl font-semibold text-white">Transactions</h1>
-      </header>
+{{ define "transactions-content" }}
+<header class="space-y-2">
+  <h1 class="text-4xl font-semibold text-white">Transactions</h1>
+</header>
 
-      {{ template "transaction-form" . }}
-      {{ template "transactions-list" . }}
-    </main>
-  </body>
-</html>
+{{ template "transaction-form" . }}
+{{ template "transactions-list" . }}
 {{ end }}

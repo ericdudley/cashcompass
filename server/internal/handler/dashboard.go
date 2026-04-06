@@ -412,7 +412,5 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 		NetWorthLines:      nwLines,
 	}
 
-	if err := h.tmpl.ExecuteTemplate(w, "dashboard-page", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderPage(w, h.tmpl, "dashboard", "Dashboard", "10", "dashboard-content", data)
 }

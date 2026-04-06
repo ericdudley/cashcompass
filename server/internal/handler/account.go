@@ -53,9 +53,7 @@ func (h *AccountHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "accounts-page", splitAccounts(accounts)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderPage(w, h.tmpl, "accounts", "Accounts", "10", "accounts-content", splitAccounts(accounts))
 }
 
 func (h *AccountHandler) handleListPartial(w http.ResponseWriter, r *http.Request) {
