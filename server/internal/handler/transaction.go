@@ -264,9 +264,7 @@ func (h *TransactionHandler) handleList(w http.ResponseWriter, r *http.Request) 
 			AccountType: listData.Filter.AccountType,
 		},
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "transactions-page", pageData); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderPage(w, h.tmpl, "transactions", "Transactions", "6", "transactions-content", pageData)
 }
 
 func (h *TransactionHandler) handleListPartial(w http.ResponseWriter, r *http.Request) {
@@ -336,7 +334,12 @@ func (h *TransactionHandler) handleDelete(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	data, err := h.buildListData(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	h.renderList(w, data)
 }
 
 func (h *TransactionHandler) handleCreate(w http.ResponseWriter, r *http.Request) {

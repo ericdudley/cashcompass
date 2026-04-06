@@ -59,9 +59,7 @@ func (h *CategoryHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := h.tmpl.ExecuteTemplate(w, "categories-page", categories); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderPage(w, h.tmpl, "categories", "Categories", "10", "categories-content", categories)
 }
 
 func (h *CategoryHandler) handleListPartial(w http.ResponseWriter, r *http.Request) {

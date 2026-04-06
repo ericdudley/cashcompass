@@ -16,8 +16,9 @@
     </button>
     <button
       hx-delete="/transactions/{{ .ID }}"
-      hx-target="#transaction-{{ .ID }}"
+      hx-target="#transaction-list"
       hx-swap="outerHTML"
+      hx-include="#transaction-filters"
       hx-confirm="Delete this transaction?"
       class="text-xs px-2 py-1 bg-red-900/50 text-red-400 rounded hover:bg-red-900">
       Delete

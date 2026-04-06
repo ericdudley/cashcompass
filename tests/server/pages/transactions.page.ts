@@ -73,4 +73,12 @@ export class TransactionsPage {
 	getPresetButton(preset: string): Locator {
 		return this.page.locator(`button[hx-vals*="${preset}"]`);
 	}
+
+	// Returns the subtotal element for a given date group (date formatted as "Jan 02, 2006")
+	getDailySubtotal(formattedDate: string): Locator {
+		return this.page
+			.locator('section')
+			.filter({ has: this.page.locator(`h2:has-text("${formattedDate}")`) })
+			.locator('div.flex.justify-between > span.font-mono');
+	}
 }

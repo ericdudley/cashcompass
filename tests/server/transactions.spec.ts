@@ -152,6 +152,64 @@ test('URL updates with filter params after preset change', async ({ page }) => {
 	expect(page.url()).toContain('date_preset=last_month');
 });
 
+function parseCents(text: string): number {
+	// Handles "$1.23" and "-$1.23"
+	const m = text.replace(/\s/g, '').match(/^(-?)\\$([0-9]+)\\.([0-9]{2})$/);
+	if (!m) return NaN;
+	const sign = m[1] === '-' ? -1 : 1;
+	return sign * (parseInt(m[2]) * 100 + parseInt(m[3]));
+}
+
+test('daily total updates after create and delete', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	// Use all_time preset so the target date is always visible
+	await page.goto('/transactions?date_preset=all_time');
+
+	// Pick a fixed date in the current month unlikely to have existing transactions
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, '0');
+	const isoDate = `${year}-${month}-03`;
+	// The server formats dates as "Jan 02, 2006"
+	const fmtDate = new Date(`${isoDate}T12:00:00`).toLocaleDateString('en-US', {
+		month: 'short',
+		day: '2-digit',
+		year: 'numeric',
+	});
+
+	// Record the subtotal before (may not exist if no transactions on that day)
+	const subtotalLocator = tp.getDailySubtotal(fmtDate);
+	const subtotalTextBefore = (await subtotalLocator.isVisible())
+		? (await subtotalLocator.textContent()) ?? ''
+		: null;
+
+	// Create a debit transaction of $10.00 on the target date
+	await tp.fillCreateForm({ date: isoDate, label: 'DailyTotalTest', amount: '10.00', mode: 'debit' });
+	await tp.submitCreate();
+
+	// Wait for the new row to appear (confirms HTMX swap completed)
+	const newRow = tp.getRows().filter({ hasText: 'DailyTotalTest' }).first();
+	await expect(newRow).toBeVisible();
+
+	// Daily subtotal should now differ from the pre-create value
+	const subtotalTextAfterCreate = (await subtotalLocator.textContent()) ?? '';
+	expect(subtotalTextAfterCreate).not.toBe(subtotalTextBefore ?? '');
+
+	// Delete the transaction we just created
+	page.once('dialog', (dialog) => dialog.accept());
+	await tp.clickDeleteOnRow(newRow);
+	await expect(newRow).not.toBeVisible();
+
+	// Daily subtotal should return to what it was before (or the group should disappear)
+	if (subtotalTextBefore === null) {
+		// The day group should be gone entirely since we added the only transaction
+		await expect(subtotalLocator).not.toBeVisible();
+	} else {
+		// Subtotal should revert to the pre-create value
+		await expect(subtotalLocator).toHaveText(subtotalTextBefore);
+	}
+});
+
 test('URL params restore filters on reload', async ({ page }) => {
 	const tp = new TransactionsPage(page);
 	// Navigate directly with filter params
