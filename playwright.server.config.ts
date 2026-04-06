@@ -5,7 +5,7 @@ const TEST_DB = '/tmp/cashcompass_test.db';
 
 const config: PlaywrightTestConfig = {
 	webServer: {
-		command: `CASHCOMPASS_DB_PATH=${TEST_DB} CASHCOMPASS_PORT=${TEST_PORT} /usr/local/go/bin/go run ./cmd/server`,
+		command: `CASHCOMPASS_DB_PATH=${TEST_DB} CASHCOMPASS_PORT=${TEST_PORT} CASHCOMPASS_DEV=true go run ./cmd/server`,
 		cwd: './server',
 		port: TEST_PORT,
 		reuseExistingServer: false,
