@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/ericdudley/cashcompass/compare/v0.1.1...v0.2.0) (2026-04-06)
+
+
+### Features
+
+* Remove server banner ([#8](https://github.com/ericdudley/cashcompass/issues/8)) ([ca7e1e0](https://github.com/ericdudley/cashcompass/commit/ca7e1e0d38defb6597108f7efa081f4713c59951))
+
 ## [0.1.1](https://github.com/ericdudley/cashcompass/compare/v0.1.0...v0.1.1) (2026-04-06)
 
 
