@@ -20,7 +20,7 @@ type TransactionRepository interface {
 	UpdateCategory(ctx context.Context, id int, categoryID *int, categoryLabel string) error
 	UpdateDate(ctx context.Context, id int, iso8601, date string) error
 	Delete(ctx context.Context, id int) error
-	SumByMonth(ctx context.Context, accountType, dateFrom, dateTo string) ([]model.MonthSum, error)
+	SumByMonth(ctx context.Context, accountType model.AccountType, dateFrom, dateTo string) ([]model.MonthSum, error)
 	BalancesByMonth(ctx context.Context, accountIDs []int) ([]model.AccountMonthBalance, error)
 	// Sync helpers called by AccountService and CategoryService.
 	SyncAccountLabel(ctx context.Context, accountID int, label string) error
@@ -178,7 +178,7 @@ func (r *SQLiteTransactionRepository) Delete(ctx context.Context, id int) error 
 	return err
 }
 
-func (r *SQLiteTransactionRepository) SumByMonth(ctx context.Context, accountType, dateFrom, dateTo string) ([]model.MonthSum, error) {
+func (r *SQLiteTransactionRepository) SumByMonth(ctx context.Context, accountType model.AccountType, dateFrom, dateTo string) ([]model.MonthSum, error) {
 	query := `
 		SELECT replace(substr(t.yyyy_mm_dd, 1, 7), '_', '-') AS month, SUM(t.amount) AS total
 		FROM transactions t

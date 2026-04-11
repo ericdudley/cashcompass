@@ -47,7 +47,7 @@ func (m *MockAccountRepository) GetByID(_ context.Context, id int) (model.Accoun
 	return model.Account{}, fmt.Errorf("account %d not found", id)
 }
 
-func (m *MockAccountRepository) Create(_ context.Context, label, accountType string) (model.Account, error) {
+func (m *MockAccountRepository) Create(_ context.Context, label string, accountType model.AccountType) (model.Account, error) {
 	if m.createErr != nil {
 		return model.Account{}, m.createErr
 	}
@@ -70,7 +70,7 @@ func (m *MockAccountRepository) UpdateLabel(_ context.Context, id int, label str
 	return fmt.Errorf("account %d not found", id)
 }
 
-func (m *MockAccountRepository) UpdateType(_ context.Context, id int, accountType string) error {
+func (m *MockAccountRepository) UpdateType(_ context.Context, id int, accountType model.AccountType) error {
 	if m.updateErr != nil {
 		return m.updateErr
 	}
@@ -111,8 +111,8 @@ func (m *MockAccountRepository) Delete(_ context.Context, id int) error {
 
 func TestService_List(t *testing.T) {
 	mock := newMock(
-		model.Account{ID: 1, Label: "A", AccountType: "net_worth"},
-		model.Account{ID: 2, Label: "B", AccountType: "expenses"},
+		model.Account{ID: 1, Label: "A", AccountType: model.AccountTypeNetWorth},
+		model.Account{ID: 2, Label: "B", AccountType: model.AccountTypeExpenses},
 	)
 	svc := service.NewAccountService(mock, nil)
 
@@ -140,7 +140,7 @@ func TestService_Create(t *testing.T) {
 	mock := newMock()
 	svc := service.NewAccountService(mock, nil)
 
-	a, err := svc.Create(context.Background(), "Checking", "net_worth")
+	a, err := svc.Create(context.Background(), "Checking", model.AccountTypeNetWorth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestService_Create(t *testing.T) {
 }
 
 func TestService_UpdateLabel(t *testing.T) {
-	mock := newMock(model.Account{ID: 1, Label: "Old", AccountType: "net_worth"})
+	mock := newMock(model.Account{ID: 1, Label: "Old", AccountType: model.AccountTypeNetWorth})
 	svc := service.NewAccountService(mock, nil)
 
 	if err := svc.UpdateLabel(context.Background(), 1, "New"); err != nil {
@@ -162,19 +162,19 @@ func TestService_UpdateLabel(t *testing.T) {
 }
 
 func TestService_UpdateType(t *testing.T) {
-	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: "net_worth"})
+	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: model.AccountTypeNetWorth})
 	svc := service.NewAccountService(mock, nil)
 
-	if err := svc.UpdateType(context.Background(), 1, "expenses"); err != nil {
+	if err := svc.UpdateType(context.Background(), 1, model.AccountTypeExpenses); err != nil {
 		t.Fatal(err)
 	}
-	if mock.accounts[0].AccountType != "expenses" {
-		t.Errorf("type: got %q, want %q", mock.accounts[0].AccountType, "expenses")
+	if mock.accounts[0].AccountType != model.AccountTypeExpenses {
+		t.Errorf("type: got %q, want %q", mock.accounts[0].AccountType, model.AccountTypeExpenses)
 	}
 }
 
 func TestService_ToggleArchived_Archives(t *testing.T) {
-	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: "net_worth", IsArchived: false})
+	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: model.AccountTypeNetWorth, IsArchived: false})
 	svc := service.NewAccountService(mock, nil)
 
 	a, err := svc.ToggleArchived(context.Background(), 1)
@@ -187,7 +187,7 @@ func TestService_ToggleArchived_Archives(t *testing.T) {
 }
 
 func TestService_ToggleArchived_Unarchives(t *testing.T) {
-	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: "net_worth", IsArchived: true})
+	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: model.AccountTypeNetWorth, IsArchived: true})
 	svc := service.NewAccountService(mock, nil)
 
 	a, err := svc.ToggleArchived(context.Background(), 1)
@@ -210,7 +210,7 @@ func TestService_ToggleArchived_NotFound(t *testing.T) {
 }
 
 func TestService_Delete(t *testing.T) {
-	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: "net_worth"})
+	mock := newMock(model.Account{ID: 1, Label: "A", AccountType: model.AccountTypeNetWorth})
 	svc := service.NewAccountService(mock, nil)
 
 	if err := svc.Delete(context.Background(), 1); err != nil {

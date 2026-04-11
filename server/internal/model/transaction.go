@@ -23,7 +23,7 @@ type TransactionFilter struct {
 	Label       string // substring match; empty = no filter
 	AccountIDs  []int  // empty = no filter
 	CategoryIDs []int  // empty = no filter
-	AccountType string // "expenses" | "net_worth"; empty = no filter
+	AccountType AccountType // "expenses" | "net_worth"; empty = no filter
 }
 
 // CreateTransactionParams holds inputs for creating a transaction.

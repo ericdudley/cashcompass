@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cashcompass-server",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "export PATH=$PATH:/usr/local/go/bin; cd server && CASHCOMPASS_DEV=true CASHCOMPASS_DB_PATH=/tmp/cashcompass_preview.db CASHCOMPASS_PORT=$PORT go run ./cmd/server"],
+      "port": 8080,
+      "autoPort": true
+    }
+  ]
+}

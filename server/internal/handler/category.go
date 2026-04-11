@@ -3,7 +3,6 @@ package handler
 import (
 	"html/template"
 	"net/http"
-	"strconv"
 
 	"cashcompass-server/internal/service"
 )
@@ -27,20 +26,6 @@ func (h *CategoryHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /partials/categories/{id}/edit", h.handleCardEditPartial)
 }
 
-func (h *CategoryHandler) parseID(r *http.Request) (int, error) {
-	return strconv.Atoi(r.PathValue("id"))
-}
-
-func (h *CategoryHandler) renderCard(w http.ResponseWriter, r *http.Request, id int) {
-	c, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if err := h.tmpl.ExecuteTemplate(w, "category-card", c); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 func (h *CategoryHandler) renderList(w http.ResponseWriter, r *http.Request) {
 	categories, err := h.svc.List(r.Context())
@@ -76,7 +61,7 @@ func (h *CategoryHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CategoryHandler) handleUpdateLabel(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -85,11 +70,11 @@ func (h *CategoryHandler) handleUpdateLabel(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.renderCard(w, r, id)
+	renderCard(w, r, h.tmpl, "category-card", h.svc.GetByID, id)
 }
 
 func (h *CategoryHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -102,26 +87,19 @@ func (h *CategoryHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CategoryHandler) handleCardPartial(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	h.renderCard(w, r, id)
+	renderCard(w, r, h.tmpl, "category-card", h.svc.GetByID, id)
 }
 
 func (h *CategoryHandler) handleCardEditPartial(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	c, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if err := h.tmpl.ExecuteTemplate(w, "category-card-edit", c); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderCard(w, r, h.tmpl, "category-card-edit", h.svc.GetByID, id)
 }

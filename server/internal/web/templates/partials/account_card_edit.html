@@ -11,6 +11,7 @@
     name="label"
     value="{{ .Label }}"
     autofocus
+    onkeydown="if(event.key==='Enter'){event.preventDefault();this.closest('[id^=account-]').querySelector('button[hx-put]').click()}"
     class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
   />
   <div class="flex gap-2">

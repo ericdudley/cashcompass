@@ -2,10 +2,11 @@ package web
 
 import (
 	"embed"
-	"fmt"
 	"html/template"
 	"strings"
 	"time"
+
+	"cashcompass-server/internal/format"
 )
 
 //go:embed templates/*.html templates/partials/*.html
@@ -24,12 +25,6 @@ func ParseTemplates() (*template.Template, error) {
 			}
 			return float64(a) / float64(b)
 		},
-		"fmtAmount": func(cents int) string {
-			if cents < 0 {
-				return fmt.Sprintf("-$%.2f", float64(-cents)/100)
-			}
-			return fmt.Sprintf("$%.2f", float64(cents)/100)
-		},
 		"fmtDate": func(yyyyMMdd string) string {
 			s := strings.ReplaceAll(yyyyMMdd, "_", "-")
 			t, err := time.Parse("2006-01-02", s)
@@ -46,13 +41,7 @@ func ParseTemplates() (*template.Template, error) {
 			}
 			return false
 		},
-		"centsToDecimal": func(cents int) string {
-			abs := cents
-			if abs < 0 {
-				abs = -abs
-			}
-			return fmt.Sprintf("%.2f", float64(abs)/100)
-		},
+		"centsToDecimal": format.CentsInput,
 		"derefInt": func(p *int) int {
 			if p == nil {
 				return 0
@@ -65,14 +54,7 @@ func ParseTemplates() (*template.Template, error) {
 			}
 			return n
 		},
-		"formatCents": func(cents int) string {
-			sign := "+"
-			if cents < 0 {
-				sign = "-"
-				cents = -cents
-			}
-			return fmt.Sprintf("%s$%.2f", sign, float64(cents)/100)
-		},
+		"formatCents": format.Cents,
 		"presetOptions": func() []presetOption {
 			return []presetOption{
 				{"this_month", "This Month"},

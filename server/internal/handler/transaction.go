@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"html/template"
 	"math"
 	"net/http"
@@ -43,7 +42,7 @@ type txnFilterState struct {
 	DateTo      string
 	Label       string
 	CategoryIDs []int
-	AccountType string // "expenses" | "net_worth"
+	AccountType model.AccountType // "expenses" | "net_worth"
 }
 
 type txnGroup struct {
@@ -63,7 +62,7 @@ type txnFormData struct {
 	Categories  []model.Category
 	Today       string
 	LastAccount int
-	AccountType string // current mode, passed through for hidden input
+	AccountType model.AccountType // current mode, passed through for hidden input
 }
 
 type txnPageData struct {
@@ -99,7 +98,7 @@ func presetToDates(preset string) (from, to string) {
 
 func filterToQueryString(f txnFilterState) string {
 	params := url.Values{}
-	params.Set("account_type", f.AccountType)
+	params.Set("account_type", string(f.AccountType))
 	if f.DatePreset != "" {
 		params.Set("date_preset", f.DatePreset)
 	}
@@ -121,12 +120,12 @@ func filterToQueryString(f txnFilterState) string {
 func parseFilterFromQuery(r *http.Request) txnFilterState {
 	q := r.URL.Query()
 	// account_type may arrive as a query param (GET) or form body (POST from create form)
-	accountType := q.Get("account_type")
-	if accountType == "" {
-		accountType = r.FormValue("account_type")
+	at := model.AccountType(q.Get("account_type"))
+	if at == "" {
+		at = model.AccountType(r.FormValue("account_type"))
 	}
-	if accountType != "expenses" && accountType != "net_worth" {
-		accountType = "expenses"
+	if !at.IsValid() {
+		at = model.AccountTypeExpenses
 	}
 	datePreset := q.Get("date_preset")
 	// Default to "this_month" when no date filters are provided
@@ -138,7 +137,7 @@ func parseFilterFromQuery(r *http.Request) txnFilterState {
 		DateFrom:    q.Get("date_from"),
 		DateTo:      q.Get("date_to"),
 		Label:       q.Get("label"),
-		AccountType: accountType,
+		AccountType: at,
 	}
 	for _, s := range q["category_id"] {
 		if id, err := strconv.Atoi(s); err == nil {
@@ -278,8 +277,7 @@ func (h *TransactionHandler) handleListPartial(w http.ResponseWriter, r *http.Re
 }
 
 func (h *TransactionHandler) handleRowPartial(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -293,8 +291,7 @@ func (h *TransactionHandler) handleRowPartial(w http.ResponseWriter, r *http.Req
 }
 
 func (h *TransactionHandler) handleRowEditPartial(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -324,8 +321,7 @@ func (h *TransactionHandler) handleRowEditPartial(w http.ResponseWriter, r *http
 }
 
 func (h *TransactionHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -423,8 +419,7 @@ func (h *TransactionHandler) handleCreate(w http.ResponseWriter, r *http.Request
 }
 
 func (h *TransactionHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -527,12 +522,3 @@ func (h *TransactionHandler) handleUpdate(w http.ResponseWriter, r *http.Request
 	h.renderRow(w, t)
 }
 
-// centsDisplay returns a formatted string like "-$12.34" or "+$12.34"
-func centsDisplay(cents int) string {
-	sign := "+"
-	if cents < 0 {
-		sign = "-"
-	}
-	abs := math.Abs(float64(cents))
-	return fmt.Sprintf("%s$%.2f", sign, abs/100)
-}

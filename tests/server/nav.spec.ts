@@ -8,8 +8,15 @@ test('nav bar is visible on home page', async ({ page }) => {
 
 test('nav links to accounts and categories from home', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.locator('nav a[href="/accounts"]').first()).toBeVisible();
-	await expect(page.locator('nav a[href="/categories"]').first()).toBeVisible();
+	const hamburger = page.locator('[onclick*="mobile-nav"]');
+	if (await hamburger.isVisible()) {
+		await hamburger.click();
+		await expect(page.locator('#mobile-nav a[href="/accounts"]')).toBeVisible();
+		await expect(page.locator('#mobile-nav a[href="/categories"]')).toBeVisible();
+	} else {
+		await expect(page.locator('nav a[href="/accounts"]').first()).toBeVisible();
+		await expect(page.locator('nav a[href="/categories"]').first()).toBeVisible();
+	}
 });
 
 test('accounts link is active on accounts page', async ({ page }) => {
@@ -36,6 +43,12 @@ test('nav brand link navigates to dashboard', async ({ page }) => {
 
 test('nav accounts link navigates to accounts', async ({ page }) => {
 	await page.goto('/');
-	await page.locator('nav a[href="/accounts"]').first().click();
+	const hamburger = page.locator('[onclick*="mobile-nav"]');
+	if (await hamburger.isVisible()) {
+		await hamburger.click();
+		await page.locator('#mobile-nav a[href="/accounts"]').click();
+	} else {
+		await page.locator('nav a[href="/accounts"]').first().click();
+	}
 	await expect(page).toHaveURL('/accounts');
 });
