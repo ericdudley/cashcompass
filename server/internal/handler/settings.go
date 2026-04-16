@@ -168,7 +168,7 @@ func (h *SettingsHandler) handleImportExpenses(w http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 
 	// Create import account
-	importAccount, err := h.accounts.Create(ctx, "Imported Expenses "+time.Now().Format(time.RFC3339), "expenses")
+	importAccount, err := h.accounts.Create(ctx, "Imported Expenses "+time.Now().Format(time.RFC3339), model.AccountTypeExpenses)
 	if err != nil {
 		http.Redirect(w, r, "/settings?error="+urlEncode(err.Error()), http.StatusSeeOther)
 		return
@@ -239,7 +239,7 @@ func (h *SettingsHandler) handleImportExpenses(w http.ResponseWriter, r *http.Re
 }
 
 func (h *SettingsHandler) handleExportExpenses(w http.ResponseWriter, r *http.Request) {
-	txns, err := h.txns.List(r.Context(), model.TransactionFilter{AccountType: "expenses"})
+	txns, err := h.txns.List(r.Context(), model.TransactionFilter{AccountType: model.AccountTypeExpenses})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -324,7 +324,7 @@ func (h *SettingsHandler) handleImportAccounts(w http.ResponseWriter, r *http.Re
 	}
 	acctMap := make(map[string]model.Account)
 	for _, a := range allAccounts {
-		if a.AccountType == "net_worth" {
+		if a.AccountType == model.AccountTypeNetWorth {
 			acctMap[a.Label] = a
 		}
 	}
@@ -359,7 +359,7 @@ func (h *SettingsHandler) handleImportAccounts(w http.ResponseWriter, r *http.Re
 		// Ensure account exists
 		acct, ok := acctMap[acctLabel]
 		if !ok {
-			acct, err = h.accounts.Create(ctx, acctLabel, "net_worth")
+			acct, err = h.accounts.Create(ctx, acctLabel, model.AccountTypeNetWorth)
 			if err != nil {
 				http.Redirect(w, r, "/settings?error="+urlEncode(err.Error()), http.StatusSeeOther)
 				return
@@ -426,7 +426,7 @@ func (h *SettingsHandler) handleExportAccounts(w http.ResponseWriter, r *http.Re
 	_ = cw.Write([]string{"Account", "Date", "Balance"})
 
 	for _, acct := range allAccounts {
-		if acct.AccountType != "net_worth" {
+		if acct.AccountType != model.AccountTypeNetWorth {
 			continue
 		}
 		txns, err := h.txns.List(r.Context(), model.TransactionFilter{AccountIDs: []int{acct.ID}})

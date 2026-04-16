@@ -1,9 +1,10 @@
 FROM golang:1.22-alpine AS builder
+ARG VERSION=dev
 WORKDIR /app
 COPY server/go.mod server/go.sum ./
 RUN go mod download
 COPY server/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /cashcompass-server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${VERSION}" -o /cashcompass-server ./cmd/server
 
 FROM alpine:3.20
 WORKDIR /app

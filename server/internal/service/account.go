@@ -10,9 +10,9 @@ import (
 type AccountService interface {
 	List(ctx context.Context) ([]model.Account, error)
 	GetByID(ctx context.Context, id int) (model.Account, error)
-	Create(ctx context.Context, label, accountType string) (model.Account, error)
+	Create(ctx context.Context, label string, accountType model.AccountType) (model.Account, error)
 	UpdateLabel(ctx context.Context, id int, label string) error
-	UpdateType(ctx context.Context, id int, accountType string) error
+	UpdateType(ctx context.Context, id int, accountType model.AccountType) error
 	ToggleArchived(ctx context.Context, id int) (model.Account, error)
 	Delete(ctx context.Context, id int) error
 }
@@ -34,7 +34,7 @@ func (s *AccountServiceImpl) GetByID(ctx context.Context, id int) (model.Account
 	return s.accounts.GetByID(ctx, id)
 }
 
-func (s *AccountServiceImpl) Create(ctx context.Context, label, accountType string) (model.Account, error) {
+func (s *AccountServiceImpl) Create(ctx context.Context, label string, accountType model.AccountType) (model.Account, error) {
 	return s.accounts.Create(ctx, label, accountType)
 }
 
@@ -48,7 +48,7 @@ func (s *AccountServiceImpl) UpdateLabel(ctx context.Context, id int, label stri
 	return nil
 }
 
-func (s *AccountServiceImpl) UpdateType(ctx context.Context, id int, accountType string) error {
+func (s *AccountServiceImpl) UpdateType(ctx context.Context, id int, accountType model.AccountType) error {
 	return s.accounts.UpdateType(ctx, id, accountType)
 }
 

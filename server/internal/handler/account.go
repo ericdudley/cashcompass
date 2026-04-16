@@ -3,7 +3,6 @@ package handler
 import (
 	"html/template"
 	"net/http"
-	"strconv"
 
 	"cashcompass-server/internal/model"
 	"cashcompass-server/internal/service"
@@ -69,8 +68,12 @@ func (h *AccountHandler) handleListPartial(w http.ResponseWriter, r *http.Reques
 
 func (h *AccountHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	label := r.FormValue("label")
-	accountType := r.FormValue("account_type")
-	if _, err := h.svc.Create(r.Context(), label, accountType); err != nil {
+	at := model.AccountType(r.FormValue("account_type"))
+	if !at.IsValid() {
+		http.Error(w, "invalid account_type", http.StatusBadRequest)
+		return
+	}
+	if _, err := h.svc.Create(r.Context(), label, at); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -84,23 +87,9 @@ func (h *AccountHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *AccountHandler) parseID(r *http.Request) (int, error) {
-	return strconv.Atoi(r.PathValue("id"))
-}
-
-func (h *AccountHandler) renderCard(w http.ResponseWriter, r *http.Request, id int) {
-	a, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if err := h.tmpl.ExecuteTemplate(w, "account-card", a); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 func (h *AccountHandler) handleUpdateLabel(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -109,24 +98,29 @@ func (h *AccountHandler) handleUpdateLabel(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.renderCard(w, r, id)
+	renderCard(w, r, h.tmpl, "account-card", h.svc.GetByID, id)
 }
 
 func (h *AccountHandler) handleUpdateType(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	if err := h.svc.UpdateType(r.Context(), id, r.FormValue("account_type")); err != nil {
+	at := model.AccountType(r.FormValue("account_type"))
+	if !at.IsValid() {
+		http.Error(w, "invalid account_type", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.UpdateType(r.Context(), id, at); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.renderCard(w, r, id)
+	renderCard(w, r, h.tmpl, "account-card", h.svc.GetByID, id)
 }
 
 func (h *AccountHandler) handleToggleArchive(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -146,7 +140,7 @@ func (h *AccountHandler) handleToggleArchive(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *AccountHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
@@ -159,26 +153,19 @@ func (h *AccountHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AccountHandler) handleCardPartial(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	h.renderCard(w, r, id)
+	renderCard(w, r, h.tmpl, "account-card", h.svc.GetByID, id)
 }
 
 func (h *AccountHandler) handleCardEditPartial(w http.ResponseWriter, r *http.Request) {
-	id, err := h.parseID(r)
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	a, err := h.svc.GetByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if err := h.tmpl.ExecuteTemplate(w, "account-card-edit", a); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	renderCard(w, r, h.tmpl, "account-card-edit", h.svc.GetByID, id)
 }

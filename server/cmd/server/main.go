@@ -11,6 +11,9 @@ import (
 	"cashcompass-server/internal/web"
 )
 
+// version is set at build time via -ldflags "-X main.version=X.Y.Z".
+var version = "dev"
+
 func main() {
 	dataDir := filepath.Join(".", "data")
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
@@ -67,7 +70,7 @@ func main() {
 		port = "8080"
 	}
 	addr := ":" + port
-	log.Printf("cashcompass server listening on %s", addr)
+	log.Printf("cashcompass server version=%s listening on %s", version, addr)
 	if err := http.ListenAndServe(addr, server.Routes()); err != nil {
 		log.Fatalf("server: %v", err)
 	}

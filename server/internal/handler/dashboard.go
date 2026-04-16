@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"cashcompass-server/internal/format"
 	"cashcompass-server/internal/model"
 	"cashcompass-server/internal/service"
 )
@@ -80,17 +81,6 @@ var dashNetWorthColors = []template.CSS{
 	"#fb923c", // orange-400
 }
 
-func dashFmtDollars(cents int) string {
-	abs := math.Abs(float64(cents))
-	if cents < 0 {
-		return fmt.Sprintf("-$%.2f", abs/100)
-	}
-	return fmt.Sprintf("$%.2f", abs/100)
-}
-
-func dashFmtAbs(cents int) string {
-	return fmt.Sprintf("$%.2f", math.Abs(float64(cents))/100)
-}
 
 func dashMonthLabel(yyyyMM string) string {
 	t, err := time.Parse("2006-01", yyyyMM)
@@ -107,7 +97,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 	prevMonth := now.AddDate(0, -1, 0).Format("2006-01")
 
 	// --- Expenses by month ---
-	expSums, err := h.txns.SumByMonth(ctx, "expenses", "", "")
+	expSums, err := h.txns.SumByMonth(ctx, model.AccountTypeExpenses, "", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -144,7 +134,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 	avgStr := "$0.00"
 	if avgCount > 0 {
-		avgStr = dashFmtAbs(avgSum / avgCount)
+		avgStr = format.CentsAbs(avgSum / avgCount)
 	}
 
 	// Sorted month list for bar chart (last 12)
@@ -171,7 +161,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 		pct := float64(amt) / float64(maxExp) * 100
 		expBars[i] = expenseBar{
 			Month:       dashMonthLabel(m),
-			AmtFmt:      dashFmtAbs(amt),
+			AmtFmt:      format.CentsAbs(amt),
 			HeightStyle: template.CSS(fmt.Sprintf("height:%.1f%%", pct)),
 		}
 		expMonthLabels[i] = dashMonthLabel(m)
@@ -199,7 +189,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		txnList, err := h.txns.List(ctx, model.TransactionFilter{
-			AccountType: "expenses",
+			AccountType: model.AccountTypeExpenses,
 			DateFrom:    strings.ReplaceAll(catMonths[0], "-", "_") + "_01",
 			DateTo:      endOfLastMonth,
 		})
@@ -243,13 +233,13 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 				if amt == 0 {
 					totals[j] = "—"
 				} else {
-					totals[j] = dashFmtAbs(amt)
+					totals[j] = format.CentsAbs(amt)
 				}
 			}
 			catRows[i] = catMonthRow{
 				Category: c,
 				Totals:   totals,
-				Total:    dashFmtAbs(catTotals[c]),
+				Total:    format.CentsAbs(catTotals[c]),
 			}
 		}
 	}
@@ -263,7 +253,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 
 	var nwAccountIDs []int
 	for _, a := range allAccounts {
-		if a.AccountType == "net_worth" && !a.IsArchived {
+		if a.AccountType == model.AccountTypeNetWorth && !a.IsArchived {
 			nwAccountIDs = append(nwAccountIDs, a.ID)
 		}
 	}
@@ -330,7 +320,7 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 			if b, ok := mb[m]; ok {
 				prev = b
 			}
-			balStr[i] = dashFmtDollars(prev)
+			balStr[i] = format.CentsDollars(prev)
 		}
 		nwTableRows = append(nwTableRows, netWorthTableRow{
 			Label:    nwLabelMap[id],
@@ -398,11 +388,11 @@ func (h *DashboardHandler) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := dashboardPageData{
-		ThisMonthExpenses:  dashFmtAbs(thisMonthExp),
+		ThisMonthExpenses:  format.CentsAbs(thisMonthExp),
 		ExpenseChangePct:   changeStr,
 		ExpenseChangePos:   changePos,
 		AvgMonthlyExpenses: avgStr,
-		CurrentNetWorth:    dashFmtDollars(totalNW),
+		CurrentNetWorth:    format.CentsDollars(totalNW),
 		ExpenseBars:        expBars,
 		ExpenseMonths:      expMonthLabels,
 		CatMonths:          catMonthLabels,

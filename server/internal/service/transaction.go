@@ -17,7 +17,7 @@ type TransactionService interface {
 	UpdateCategory(ctx context.Context, id int, categoryID *int, categoryLabel string) error
 	UpdateDate(ctx context.Context, id int, iso8601, date string) error
 	Delete(ctx context.Context, id int) error
-	SumByMonth(ctx context.Context, accountType, dateFrom, dateTo string) ([]model.MonthSum, error)
+	SumByMonth(ctx context.Context, accountType model.AccountType, dateFrom, dateTo string) ([]model.MonthSum, error)
 	BalancesByMonth(ctx context.Context, accountIDs []int) ([]model.AccountMonthBalance, error)
 }
 
@@ -65,7 +65,7 @@ func (s *TransactionServiceImpl) Delete(ctx context.Context, id int) error {
 	return s.transactions.Delete(ctx, id)
 }
 
-func (s *TransactionServiceImpl) SumByMonth(ctx context.Context, accountType, dateFrom, dateTo string) ([]model.MonthSum, error) {
+func (s *TransactionServiceImpl) SumByMonth(ctx context.Context, accountType model.AccountType, dateFrom, dateTo string) ([]model.MonthSum, error) {
 	return s.transactions.SumByMonth(ctx, accountType, dateFrom, dateTo)
 }
 

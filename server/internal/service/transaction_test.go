@@ -122,7 +122,7 @@ func (m *MockTransactionRepository) Delete(_ context.Context, id int) error {
 	return fmt.Errorf("not found")
 }
 
-func (m *MockTransactionRepository) SumByMonth(_ context.Context, _, _, _ string) ([]model.MonthSum, error) {
+func (m *MockTransactionRepository) SumByMonth(_ context.Context, _ model.AccountType, _, _ string) ([]model.MonthSum, error) {
 	return nil, nil
 }
 
@@ -203,7 +203,7 @@ func TestTxnService_Delete(t *testing.T) {
 // --- AccountService sync tests using MockTransactionRepository ---
 
 func TestAccountService_UpdateLabel_SyncsTransactions(t *testing.T) {
-	accMock := newMock(model.Account{ID: 1, Label: "Old", AccountType: "net_worth"})
+	accMock := newMock(model.Account{ID: 1, Label: "Old", AccountType: model.AccountTypeNetWorth})
 	txnMock := newMockTxn()
 	svc := service.NewAccountService(accMock, txnMock)
 

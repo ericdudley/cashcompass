@@ -16,7 +16,7 @@ test-e2e:
 test: test-go test-e2e
 
 docker-build-server:
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+	docker build --build-arg VERSION=$(DOCKER_TAG) -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 docker-push-server:
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)

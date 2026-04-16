@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"cashcompass-server/internal/db"
+	"cashcompass-server/internal/model"
 	"cashcompass-server/internal/repository"
 )
 
@@ -37,7 +38,7 @@ func TestCreate_And_List(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	a, err := repo.Create(ctx, "Checking", "net_worth")
+	a, err := repo.Create(ctx, "Checking", model.AccountTypeNetWorth)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,8 +48,8 @@ func TestCreate_And_List(t *testing.T) {
 	if a.Label != "Checking" {
 		t.Errorf("label: got %q, want %q", a.Label, "Checking")
 	}
-	if a.AccountType != "net_worth" {
-		t.Errorf("account_type: got %q, want %q", a.AccountType, "net_worth")
+	if a.AccountType != model.AccountTypeNetWorth {
+		t.Errorf("account_type: got %q, want %q", a.AccountType, model.AccountTypeNetWorth)
 	}
 
 	accounts, err := repo.List(ctx)
@@ -72,7 +73,7 @@ func TestGetByID_Found(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, "Savings", "net_worth")
+	created, _ := repo.Create(ctx, "Savings", model.AccountTypeNetWorth)
 	got, err := repo.GetByID(ctx, created.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +95,7 @@ func TestUpdateLabel(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	a, _ := repo.Create(ctx, "Old", "net_worth")
+	a, _ := repo.Create(ctx, "Old", model.AccountTypeNetWorth)
 	if err := repo.UpdateLabel(ctx, a.ID, "New"); err != nil {
 		t.Fatal(err)
 	}
@@ -108,13 +109,13 @@ func TestUpdateType(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	a, _ := repo.Create(ctx, "Test", "net_worth")
-	if err := repo.UpdateType(ctx, a.ID, "expenses"); err != nil {
+	a, _ := repo.Create(ctx, "Test", model.AccountTypeNetWorth)
+	if err := repo.UpdateType(ctx, a.ID, model.AccountTypeExpenses); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := repo.GetByID(ctx, a.ID)
-	if got.AccountType != "expenses" {
-		t.Errorf("account_type: got %q, want %q", got.AccountType, "expenses")
+	if got.AccountType != model.AccountTypeExpenses {
+		t.Errorf("account_type: got %q, want %q", got.AccountType, model.AccountTypeExpenses)
 	}
 }
 
@@ -122,7 +123,7 @@ func TestSetArchived(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	a, _ := repo.Create(ctx, "Test", "net_worth")
+	a, _ := repo.Create(ctx, "Test", model.AccountTypeNetWorth)
 	if err := repo.SetArchived(ctx, a.ID, true); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestDelete(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	a, _ := repo.Create(ctx, "ToDelete", "expenses")
+	a, _ := repo.Create(ctx, "ToDelete", model.AccountTypeExpenses)
 	if err := repo.Delete(ctx, a.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -156,9 +157,9 @@ func TestList_OrderedByArchivedThenLabel(t *testing.T) {
 	repo := repository.NewSQLiteAccountRepository(setupTestDB(t))
 	ctx := context.Background()
 
-	b, _ := repo.Create(ctx, "Beta", "net_worth")
-	a, _ := repo.Create(ctx, "Alpha", "net_worth")
-	_, _ = repo.Create(ctx, "Zeta", "net_worth")
+	b, _ := repo.Create(ctx, "Beta", model.AccountTypeNetWorth)
+	a, _ := repo.Create(ctx, "Alpha", model.AccountTypeNetWorth)
+	_, _ = repo.Create(ctx, "Zeta", model.AccountTypeNetWorth)
 	_ = repo.SetArchived(ctx, b.ID, true)
 	_ = repo.SetArchived(ctx, a.ID, true)
 

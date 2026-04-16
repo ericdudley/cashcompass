@@ -20,7 +20,7 @@ func seedAccount(t *testing.T, db interface {
 }
 
 // createTestAccount inserts an account and returns its ID.
-func createTestAccount(t *testing.T, repo *repository.SQLiteAccountRepository, label, typ string) int {
+func createTestAccount(t *testing.T, repo *repository.SQLiteAccountRepository, label string, typ model.AccountType) int {
 	t.Helper()
 	a, err := repo.Create(context.Background(), label, typ)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestTxnCreate_And_GetByID(t *testing.T) {
 	sqlDB := setupTestDB(t)
 	repo := repository.NewSQLiteTransactionRepository(sqlDB)
 	accRepo := repository.NewSQLiteAccountRepository(sqlDB)
-	accID := createTestAccount(t, accRepo, "Checking", "net_worth")
+	accID := createTestAccount(t, accRepo, "Checking", model.AccountTypeNetWorth)
 
 	p := model.CreateTransactionParams{
 		ISO8601:      "2026-03-01T10:00:00Z",
@@ -148,8 +148,8 @@ func TestTxnList_FilterByAccountIDs(t *testing.T) {
 	repo := repository.NewSQLiteTransactionRepository(sqlDB)
 	accRepo := repository.NewSQLiteAccountRepository(sqlDB)
 
-	acc1 := createTestAccount(t, accRepo, "A", "net_worth")
-	acc2 := createTestAccount(t, accRepo, "B", "net_worth")
+	acc1 := createTestAccount(t, accRepo, "A", model.AccountTypeNetWorth)
+	acc2 := createTestAccount(t, accRepo, "B", model.AccountTypeNetWorth)
 
 	ctx := context.Background()
 	_, _ = repo.Create(ctx, model.CreateTransactionParams{ISO8601: "2026-03-01T00:00:00Z", Date: "2026-03-01", Amount: -100, AccountID: &acc1, AccountLabel: "A"})
@@ -226,7 +226,7 @@ func TestTxnSumByMonth(t *testing.T) {
 	repo := repository.NewSQLiteTransactionRepository(sqlDB)
 	accRepo := repository.NewSQLiteAccountRepository(sqlDB)
 
-	acc := createTestAccount(t, accRepo, "Checking", "expenses")
+	acc := createTestAccount(t, accRepo, "Checking", model.AccountTypeExpenses)
 	ctx := context.Background()
 
 	for _, tc := range []struct {
@@ -243,7 +243,7 @@ func TestTxnSumByMonth(t *testing.T) {
 		})
 	}
 
-	sums, err := repo.SumByMonth(ctx, "expenses", "", "")
+	sums, err := repo.SumByMonth(ctx, model.AccountTypeExpenses, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestTxnBalancesByMonth(t *testing.T) {
 	repo := repository.NewSQLiteTransactionRepository(sqlDB)
 	accRepo := repository.NewSQLiteAccountRepository(sqlDB)
 
-	acc := createTestAccount(t, accRepo, "Savings", "net_worth")
+	acc := createTestAccount(t, accRepo, "Savings", model.AccountTypeNetWorth)
 	ctx := context.Background()
 
 	for _, tc := range []struct {
@@ -321,7 +321,7 @@ func TestTxnSyncAccountLabel(t *testing.T) {
 	repo := repository.NewSQLiteTransactionRepository(sqlDB)
 	accRepo := repository.NewSQLiteAccountRepository(sqlDB)
 
-	acc := createTestAccount(t, accRepo, "Old Name", "net_worth")
+	acc := createTestAccount(t, accRepo, "Old Name", model.AccountTypeNetWorth)
 	ctx := context.Background()
 
 	txn, _ := repo.Create(ctx, model.CreateTransactionParams{

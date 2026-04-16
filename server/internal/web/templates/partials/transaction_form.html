@@ -5,6 +5,7 @@
     hx-post="/transactions"
     hx-target="#transaction-list"
     hx-swap="outerHTML"
+    hx-on="htmx:afterRequest: if(event.detail.successful){ var d=this.querySelector('[name=date]').value; this.reset(); this.querySelector('[name=date]').value=d; }"
     class="flex flex-wrap items-end gap-3">
     <input type="hidden" name="account_type" value="{{ .Form.AccountType }}" />
     <div class="flex flex-col gap-1">
