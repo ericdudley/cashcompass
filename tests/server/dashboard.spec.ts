@@ -60,3 +60,32 @@ test('category table shows rows when expense transactions exist', async ({ page 
 		await expect(page.locator('text=No expense data yet')).toBeVisible();
 	}
 });
+
+test('dashboard renders imported net worth history without errors', async ({ page, request }) => {
+	const csv = [
+		'Account,Date,Balance',
+		'Brokerage,2026-03-15,1000.00',
+		'Brokerage,2026-04-15T23:30:00-07:00,1250.50'
+	].join('\n');
+
+	const response = await request.post('/settings/import/accounts', {
+		multipart: {
+			timezone: 'America/Los_Angeles',
+			file: {
+				name: 'accounts.csv',
+				mimeType: 'text/csv',
+				buffer: Buffer.from(csv)
+			}
+		}
+	});
+
+	expect(response.ok()).toBeTruthy();
+
+	const dp = new DashboardPage(page);
+	await dp.goto();
+
+	await expect(dp.getNetWorthSection()).toBeVisible();
+	await expect(dp.getNetWorthChart()).toBeVisible();
+	await expect(dp.getNetWorthChart().locator('polyline')).toHaveCount(1);
+	await expect(dp.getNetWorthTable()).toContainText('Brokerage');
+});

@@ -1,45 +1,83 @@
-IOS Deploy
+# CashCompass
 
-1. `npm run tauri ios build -- --export-method app-store-connect`
-2. `xcrun altool --upload-app --type ios --file "[PATHTOREPO]/src-tauri/gen/apple/build/arm64/cashcompass.ipa" --apiKey $APPLE_API_KEY_ID --apiIssuer $APPLE_API_ISSUER`
+CashCompass is a personal finance tracker built on the Python/FastHTML app in `src/`.
 
-Make sure to get dexie-cloud.json and dexie-cloud.key setup for local development.
+The legacy Go app in `server/` is still kept in the repo as a behavioral reference during the migration, but the Python app is now the primary development and deployment target.
 
-# create-svelte
+## Primary Stack
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+- **Backend**: Python, FastHTML, SQLite
+- **Frontend**: HTMX, Tailwind, FastHTML components
+- **Tests**: Playwright E2E against the Python app
 
-## Creating a project
+## Development
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Run the primary Python app:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+make dev
 ```
 
-## Building
-
-To create a production version of your app:
+Equivalent direct command:
 
 ```bash
-npm run build
+CASHCOMPASS_DEV=true .venv/bin/python -m uvicorn src.main:app --port 8080 --reload
 ```
 
-You can preview the production build with `npm run preview`.
+The app runs at `http://localhost:8080`.
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+## Testing
+
+Run the primary Python Playwright suite:
+
+```bash
+make test
+```
+
+Useful targets:
+
+```bash
+make test-e2e-py
+make test-e2e-ui-py
+make dev-go
+make test-go
+make test-e2e-go
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `CASHCOMPASS_DB_PATH` | `./src/data/cashcompass.db` | SQLite database path for the Python app |
+| `CASHCOMPASS_MIGRATIONS_PATH` | `./src/migrations` | SQL migrations path |
+| `CASHCOMPASS_PORT` | `8080` | HTTP listen port |
+| `CASHCOMPASS_DEV` | unset | Enables dev-only routes such as `/dev/reset` when `true` |
+
+## Docker
+
+Build and run the Python app with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Or build the image directly:
+
+```bash
+docker build -t ghcr.io/ericdudley/cashcompass:latest .
+docker run --rm -p 8080:8080 -v cashcompass-data:/data ghcr.io/ericdudley/cashcompass:latest
+```
+
+The published image preserves the existing runtime contract:
+
+- port `8080`
+- database at `/data/cashcompass.db`
+- persistent `/data` volume
+
+## Legacy Go Reference
+
+The Go server remains available for comparison while the migration settles:
+
+- `server/` contains the legacy implementation
+- `make dev-go` runs the Go app
+- `make test-go` and `make test-e2e-go` exercise legacy coverage

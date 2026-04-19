@@ -37,3 +37,13 @@ project.pbxproj
 
 # Playwright
 /test-results/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local tool/runtime artifacts
+.sesskey

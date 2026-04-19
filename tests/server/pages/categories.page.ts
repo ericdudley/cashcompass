@@ -8,7 +8,7 @@ export class CategoriesPage {
 	}
 
 	async createCategory(label: string) {
-		await this.page.fill('#category-label', label);
+		await this.page.fill('#cat-label', label);
 		await this.page.click('button[type="submit"]');
 		await this.page.waitForSelector(`[data-label="${label}"]`);
 	}

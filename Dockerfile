@@ -1,18 +1,17 @@
-FROM golang:1.22-alpine AS builder
+FROM python:3.13-slim
 ARG VERSION=dev
 WORKDIR /app
-COPY server/go.mod server/go.sum ./
-RUN go mod download
-COPY server/ .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${VERSION}" -o /cashcompass-server ./cmd/server
-
-FROM alpine:3.20
-WORKDIR /app
-RUN apk add --no-cache ca-certificates tzdata
-COPY --from=builder /cashcompass-server /app/cashcompass-server
-COPY --from=builder /app/static /app/static
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY src /app/src
+COPY static /app/static
 VOLUME /data
 ENV CASHCOMPASS_DB_PATH=/data/cashcompass.db
 ENV CASHCOMPASS_PORT=8080
 EXPOSE 8080
-CMD ["/app/cashcompass-server"]
+CMD ["sh", "-c", "python -m uvicorn src.main:app --host 0.0.0.0 --port ${CASHCOMPASS_PORT:-8080} --no-access-log"]

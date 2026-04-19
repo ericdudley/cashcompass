@@ -6,7 +6,7 @@ on:
 
 jobs:
   docker-release:
-    name: Build and Push Docker Image
+    name: Build, Smoke Test, and Push Docker Image
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,10 +25,41 @@ jobs:
         id: tag
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push
+      - name: Build image
         run: |
-          make docker-build-server DOCKER_TAG=${{ steps.tag.outputs.TAG }}
-          make docker-push-server  DOCKER_TAG=${{ steps.tag.outputs.TAG }}
+          docker build \
+            --build-arg VERSION=${{ steps.tag.outputs.TAG }} \
+            -t ghcr.io/ericdudley/cashcompass:${{ steps.tag.outputs.TAG }} \
+            .
+
+      - name: Smoke test image
+        run: |
+          mkdir -p /tmp/cashcompass-release-data
+          docker run -d --rm \
+            --name cashcompass-release-smoke \
+            -p 18080:8080 \
+            -v /tmp/cashcompass-release-data:/data \
+            ghcr.io/ericdudley/cashcompass:${{ steps.tag.outputs.TAG }}
+
+          trap 'docker logs cashcompass-release-smoke; docker stop cashcompass-release-smoke' EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/healthz >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:18080/healthz
+          curl -fsS http://127.0.0.1:18080/dashboard >/dev/null
+          test -f /tmp/cashcompass-release-data/cashcompass.db
+
+          docker stop cashcompass-release-smoke
+          trap - EXIT
+
+      - name: Push image
+        run: |
+          docker push ghcr.io/ericdudley/cashcompass:${{ steps.tag.outputs.TAG }}
           docker tag ghcr.io/ericdudley/cashcompass:${{ steps.tag.outputs.TAG }} \
                      ghcr.io/ericdudley/cashcompass:latest
           docker push ghcr.io/ericdudley/cashcompass:latest

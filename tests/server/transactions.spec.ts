@@ -222,3 +222,58 @@ test('URL params restore filters on reload', async ({ page }) => {
 	await page.reload();
 	await expect(tp.getPresetButton('all_time')).toHaveClass(/bg-emerald-600/);
 });
+
+test('transaction create rejects blank labels', async ({ request }) => {
+	const response = await request.post('/transactions', {
+		form: {
+			date: currentMonthDate(15),
+			label: '   ',
+			amount: '10.00',
+			amount_mode: 'debit',
+			account_id: '3',
+			category_id: '0',
+			account_type: 'expenses'
+		}
+	});
+
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain('transaction label is required');
+});
+
+test('transaction create rejects zero amounts', async ({ request }) => {
+	const response = await request.post('/transactions', {
+		form: {
+			date: currentMonthDate(15),
+			label: 'Zero Amount',
+			amount: '0.00',
+			amount_mode: 'debit',
+			account_id: '3',
+			category_id: '0',
+			account_type: 'expenses'
+		}
+	});
+
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain('transaction amount must be non-zero');
+});
+
+test('transaction update rejects invalid dates', async ({ request }) => {
+	const listResponse = await request.get('/transactions?date_preset=all_time');
+	const html = await listResponse.text();
+	const match = html.match(/id="transaction-(\d+)"/);
+	expect(match).not.toBeNull();
+
+	const response = await request.put(`/transactions/${match![1]}`, {
+		form: {
+			date: 'not-a-date',
+			label: 'Still Valid',
+			amount: '10.00',
+			amount_mode: 'debit',
+			account_id: '3',
+			category_id: '0'
+		}
+	});
+
+	expect(response.status()).toBe(400);
+	await expect(response.text()).resolves.toContain('transaction date must be YYYY-MM-DD');
+});

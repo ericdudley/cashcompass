@@ -23,6 +23,14 @@ export class DashboardPage {
 		return this.page.locator('[data-testid="net-worth-section"]');
 	}
 
+	getNetWorthChart(): Locator {
+		return this.page.locator('[data-testid="net-worth-chart"]');
+	}
+
+	getNetWorthTable(): Locator {
+		return this.page.locator('[data-testid="net-worth-table"]');
+	}
+
 	getCategoryTable(): Locator {
 		return this.getExpensesSection().locator('table');
 	}

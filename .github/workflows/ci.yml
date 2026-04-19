@@ -6,37 +6,29 @@ on:
   pull_request:
 
 jobs:
-  test-go:
-    name: Go Unit Tests
+  test-python-e2e:
+    name: Python Playwright E2E
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-python@v5
         with:
-          go-version: '1.22'
-          cache-dependency-path: server/go.sum
+          python-version: '3.13'
 
-      - run: make test-go
-
-  test-e2e:
-    name: Playwright E2E (Server)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-          cache-dependency-path: server/go.sum
+      - name: Create virtualenv and install Python deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - run: npm install
+      - run: npm ci
 
       - run: npx playwright install --with-deps chromium
 
-      - run: make test-e2e
+      - run: make test

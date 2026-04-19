@@ -1,124 +1,235 @@
 # CashCompass – Agent & Developer Guide
 
+## Current State
+
+This repo is in the middle of a migration from the legacy Go server to a new Python/FastHTML app.
+
+- Prefer the Python app under `src/` for current feature work.
+- Treat the Go app under `server/` as the legacy implementation and a reference for behavior, copy, and test intent.
+- The Playwright suites in `tests/server/` are being updated to run against the Python app via `playwright.pyserver.config.ts`.
+
+When working on a feature, check whether the relevant code path already exists in `src/` before editing the Go version.
+
 ## Repo Layout
 
-```
+```text
 cashcompass/
-├── server/                        # Go backend (module: cashcompass-server, go 1.22)
-│   ├── cmd/server/main.go         # Entry point
-│   └── internal/
-│       ├── app/server.go          # Route wiring – constructs repos/services/handlers
-│       ├── db/db.go               # Open, Migrate, SeedIfEmpty
-│       ├── model/                 # Domain types (Account, Category, Transaction)
-│       ├── repository/            # SQLite implementations of repository interfaces
-│       ├── service/               # Business logic; depends on repositories
-│       ├── handler/               # HTTP handlers; depends on services
-│       │   └── render.go          # Shared renderPage helper + PageData struct
-│       └── web/
-│           ├── templates.go       # Parses all HTML templates from embed.FS
-│           └── templates/
-│               ├── layout.html            # Shared HTML shell (head, nav, main wrapper)
-│               ├── *_page.html            # Per-page content templates (*-content names)
-│               └── partials/              # HTMX partial templates
-├── tests/server/                  # Playwright E2E tests against the Go server
-│   ├── fixtures.ts                # Custom fixture – resets DB between tests
+├── src/                           # New Python/FastHTML app
+│   ├── main.py                    # App entry point, route registration, DB init
+│   ├── db.py                      # SQLite wrapper, migrations, seed_if_empty
+│   ├── models.py                  # Dataclasses for Account, Category, Transaction
+│   ├── migrations/                # SQL migrations for Python app
+│   ├── repository/                # SQLite data access layer
+│   ├── services/                  # Business logic layer
+│   ├── routes/                    # HTTP routes and HTMX endpoints
+│   ├── components/                # FastHTML UI components/pages/partials
+│   └── utils/                     # Formatting and date helpers
+├── tests/server/                  # Playwright E2E tests and page objects
+│   ├── fixtures.ts                # Resets the DB through /dev/reset before each test
 │   ├── pages/                     # Page-object models
-│   └── *.spec.ts                  # Test suites per feature
-└── static/                        # CSS and static assets served at /static/
+│   └── *.spec.ts                  # Feature specs
+├── static/                        # Static assets served by the Python app
+├── playwright.pyserver.config.ts  # Playwright config for the Python/FastHTML app
+├── playwright.server.config.ts    # Playwright config for the legacy Go server
+└── server/                        # Legacy Go implementation
+    ├── cmd/server/main.go
+    └── internal/
 ```
 
-## Architecture Layers
+## Python App Architecture
 
-Each feature follows a strict layering: **model → repository → service → handler → template**.
+The Python app follows a layered structure:
 
-| Layer      | Lives in          | Responsibility                                  |
-|------------|-------------------|-------------------------------------------------|
-| model      | `internal/model/` | Plain Go structs; no logic                      |
-| repository | `internal/repository/` | SQL queries; implements interface          |
-| service    | `internal/service/`    | Business rules; depends on repository interface |
-| handler    | `internal/handler/`    | HTTP: parse request → call service → render template |
-| template   | `internal/web/templates/` | HTML; uses HTMX for partial updates         |
+| Layer | Lives in | Responsibility |
+|---|---|---|
+| model | `src/models.py` | Dataclasses only |
+| repository | `src/repository/` | SQL queries and row mapping |
+| service | `src/services/` | Validation and business rules |
+| route | `src/routes/` | Request parsing, HTMX/full-page responses |
+| component | `src/components/` | FastHTML page, form, list, card, and row rendering |
 
-## Running the Server
+Typical flow is:
+
+```text
+models -> repository -> service -> route -> component
+```
+
+## Python App Entry Points
+
+- Main app: `src/main.py`
+- Default port: `8080`
+- Default DB path: `./src/data/cashcompass.db`
+- Default migrations path: `./src/migrations`
+
+Useful env vars:
+
+| Variable | Default | Description |
+|---|---|---|
+| `CASHCOMPASS_DB_PATH` | `./src/data/cashcompass.db` | SQLite database for the Python app |
+| `CASHCOMPASS_MIGRATIONS_PATH` | `./src/migrations` | SQL migrations directory |
+| `CASHCOMPASS_PORT` | `8080` | HTTP port |
+| `CASHCOMPASS_DEV` | unset | Enables `/dev/reset` and other dev-only endpoints when `true` |
+
+## Running the Python App
 
 ```bash
-cd server
-go run ./cmd/server          # default port 8080, DB at ./data/cashcompass.db
-CASHCOMPASS_PORT=9000 go run ./cmd/server
-CASHCOMPASS_DB_PATH=/tmp/cc.db go run ./cmd/server
+.venv/bin/python -m uvicorn src.main:app --port 8080 --no-access-log
+```
+
+Example with a throwaway DB:
+
+```bash
+CASHCOMPASS_DB_PATH=/tmp/cashcompass.db CASHCOMPASS_DEV=true .venv/bin/python -m uvicorn src.main:app --port 8080 --no-access-log
 ```
 
 ## Running Tests
 
+Python/FastHTML Playwright tests:
+
 ```bash
-# Go unit tests (repository + service layers)
-cd server && go test ./internal/repository/... ./internal/service/...
-
-# Playwright E2E tests (spins up server on port 18080 with a fresh DB)
-npm run test:server
+npx playwright test --config playwright.pyserver.config.ts
 ```
 
-## Adding a New Page
+Run one spec:
 
-1. **Content template** – create `server/internal/web/templates/<feature>_page.html`:
-   ```html
-   {{ define "<feature>-content" }}
-   <header class="space-y-2">
-     <h1 class="text-4xl font-semibold text-white">Feature Name</h1>
-   </header>
-   <!-- page body -->
-   {{ end }}
-   ```
-
-2. **Handler** – create `server/internal/handler/<feature>.go`:
-   - Define a handler struct with `svc` and `tmpl` fields.
-   - Add a `RegisterRoutes(mux)` method.
-   - Render the full page with the shared helper:
-     ```go
-     renderPage(w, h.tmpl, "<nav-key>", "Page Title", "10", "<feature>-content", data)
-     ```
-
-3. **Wire it up** – add to `server/internal/app/server.go`:
-   ```go
-   featureHandler := handler.NewFeatureHandler(svc, s.Templates)
-   featureHandler.RegisterRoutes(mux)
-   ```
-
-4. **Nav link** – add the route to `server/internal/web/templates/partials/nav.html` so it appears in the navigation bar.
-
-## Adding a New HTMX Partial
-
-1. **Template** – create `server/internal/web/templates/partials/<name>.html` with `{{ define "<name>" }}`.
-
-2. **Handler endpoint** – add a `GET /partials/<name>` route that calls:
-   ```go
-   h.tmpl.ExecuteTemplate(w, "<name>", data)
-   ```
-
-3. **Wire the HTMX call** in the relevant page/partial template:
-   ```html
-   hx-get="/partials/<name>"
-   hx-target="#<container-id>"
-   hx-swap="outerHTML"
-   ```
-
-## Template Conventions
-
-- **Full pages**: content templates named `<feature>-content` (rendered via `renderPage`).
-- **List partials**: named `<feature>-list` (e.g. `accounts-list`).
-- **Card partials**: named `<feature>-card`, `<feature>-card-edit`.
-- **Form partials**: named `<feature>-form`.
-- The shared `layout.html` provides the HTML shell, CDN scripts, nav, and `<main>` wrapper. It is driven by `PageData` in `handler/render.go`.
-
-## Layout System
-
-Every full-page response goes through `renderPage` in `handler/render.go`:
-
-```
-renderPage(w, tmpl, navKey, title, mainGap, contentTemplate, data)
-       │                                         │
-       └── ExecuteTemplate(buf, contentTemplate) ┘  ← renders inner HTML
-       └── ExecuteTemplate(w, "layout", PageData{Body: buf})  ← wraps in shell
+```bash
+npx playwright test --config playwright.pyserver.config.ts tests/server/categories.spec.ts
 ```
 
-`mainGap` is a Tailwind gap value (`"10"` for most pages, `"6"` for Transactions).
+Run one test in isolation:
+
+```bash
+npx playwright test --config playwright.pyserver.config.ts tests/server/categories.spec.ts --grep "create category" --project=desktop
+```
+
+Legacy Go Playwright tests:
+
+```bash
+npx playwright test --config playwright.server.config.ts
+```
+
+Legacy Go unit tests:
+
+```bash
+cd server && go test ./...
+```
+
+## FastHTML Conventions
+
+### Routes
+
+Routes live in `src/routes/*.py` and are registered from `src/main.py`.
+
+Each feature usually exposes:
+
+- A full-page route such as `GET /categories`
+- Mutating HTMX routes such as `POST /categories`, `PUT /categories/{id}`, `DELETE /categories/{id}`
+- Partial routes such as `GET /partials/categories` or `GET /partials/categories/{id}/edit`
+
+Important FastHTML gotcha:
+
+- Always declare explicit methods for read-only routes, for example `@rt("/categories", methods=["GET"])`.
+- Do not rely on the default decorator behavior for page or partial routes.
+- During the migration we hit a bug where a `GET` page route also accepted `POST`, causing HTMX form submissions to return a full page instead of the intended partial.
+
+### Components
+
+Components live in `src/components/*.py`.
+
+Common patterns:
+
+- `*_page(...)` returns the full page body content
+- `*_list(...)` returns an HTMX-swappable list container
+- `*_card(...)` or `*_row(...)` returns a single display item
+- `*_card_edit(...)` or `*_row_edit(...)` returns the inline edit state
+- Shared shell/navigation lives in `src/components/layout.py`
+
+### HTMX
+
+HTMX attributes are expressed with FastHTML keyword args such as:
+
+- `hx_get`
+- `hx_post`
+- `hx_put`
+- `hx_delete`
+- `hx_target`
+- `hx_swap`
+- `hx_include`
+- `hx_vals`
+- `hx_confirm`
+
+FastHTML renders these to normal `hx-*` attributes in HTML.
+
+## Playwright Guidance
+
+The current E2E coverage lives in `tests/server/`, even though the active app under test may be Python.
+
+Before changing tests:
+
+- Confirm which Playwright config is being used.
+- Check the actual rendered FastHTML DOM instead of assuming legacy Go selectors still apply.
+- Prefer updating page objects in `tests/server/pages/` instead of duplicating selectors in specs.
+
+Current Python test harness details:
+
+- `playwright.pyserver.config.ts` runs the Python app on port `18081`
+- It uses `/tmp/cashcompass_py_test.db`
+- `tests/server/fixtures.ts` resets state before each test by POSTing to `/dev/reset`
+- Tests require `CASHCOMPASS_DEV=true` so the reset endpoint exists
+
+## Data Integrity Notes
+
+Some service-layer responsibilities are easy to miss during migration:
+
+- Renaming an account should sync `transactions.account_label`
+- Renaming a category should sync `transactions.category_label`
+- Deleting a category should also clear `transactions.category_id` and `transactions.category_label`
+- Validation belongs in the service layer when possible, with the route converting expected validation failures into HTTP responses
+
+When porting behavior from Go to Python, compare both the user-visible UI flow and the side effects on related transaction records.
+
+## Adding or Updating a Feature in the Python App
+
+1. Add or update repository logic in `src/repository/`
+2. Add validation and business rules in `src/services/`
+3. Add routes and HTMX endpoints in `src/routes/`
+4. Add or update FastHTML rendering in `src/components/`
+5. Wire the route module from `src/main.py` if needed
+6. Update the relevant Playwright page object and spec
+7. Verify at least the smallest isolated test before running the broader suite
+
+For UI work, prefer this sequence:
+
+1. Run a single Playwright test with `--grep`
+2. Fix feature bugs first
+3. Update stale selectors in the page object
+4. Re-run the isolated test
+5. Expand to the full feature spec
+
+## Legacy Go App
+
+The Go app still exists under `server/` and is useful as a behavioral reference.
+
+High-level Go structure:
+
+- `server/internal/model/`
+- `server/internal/repository/`
+- `server/internal/service/`
+- `server/internal/handler/`
+- `server/internal/web/templates/`
+
+Use the Go code when you need to:
+
+- Compare legacy behavior during migration
+- Check copy, layout, or endpoint intent
+- Understand what an existing Playwright test was originally written against
+
+Do not assume instructions written for the Go app apply unchanged to the Python app.
+
+## Practical Workflow Tips
+
+- Check `git status` before editing because the migration branch may already be dirty.
+- Prefer small focused Playwright runs while migrating selectors and HTMX behavior.
+- If an HTMX action swaps in an entire page unexpectedly, inspect route method declarations first.
+- If a FastHTML component seems to stringify oddly in a quick REPL print, use `to_xml(...)` to inspect the rendered HTML.
+- Use seeded data expectations carefully: the Python app seeds accounts, categories, and transactions on an empty DB.
