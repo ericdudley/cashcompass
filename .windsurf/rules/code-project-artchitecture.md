@@ -1,5 +1,0 @@
----
-trigger: manual
-glob:
-description:
----
