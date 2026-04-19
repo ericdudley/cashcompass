@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/ericdudley/cashcompass/compare/v0.2.0...v0.3.0) (2026-04-19)
+
+
+### Features
+
+* Migrating to FastHTML ([92447ca](https://github.com/ericdudley/cashcompass/commit/92447ca41602f28ed14f39d382403c18595a80d8))
+
+
+### Bug Fixes
+
+* Delete old Svelte/Tauri files after Go server migration ([52ebd44](https://github.com/ericdudley/cashcompass/commit/52ebd44916ade49ef393c09fbfb7cd53e18f7ce3))
+
 ## [0.2.0](https://github.com/ericdudley/cashcompass/compare/v0.1.1...v0.2.0) (2026-04-06)
 
 
