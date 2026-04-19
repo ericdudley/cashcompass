@@ -1,0 +1,76 @@
+name: Release PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  test-python-e2e:
+    name: Python Playwright E2E
+    if: "contains(github.event.pull_request.labels.*.name, 'autorelease: pending')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Create virtualenv and install Python deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: make test
+
+  smoke-test-docker-image:
+    name: Docker Smoke Test
+    if: "contains(github.event.pull_request.labels.*.name, 'autorelease: pending')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg VERSION=pr-${{ github.event.pull_request.number }} \
+            -t cashcompass-release-pr:${{ github.event.pull_request.number }} \
+            .
+
+      - name: Smoke test image
+        run: |
+          mkdir -p /tmp/cashcompass-release-pr-data
+          docker run -d --rm \
+            --name cashcompass-release-pr-smoke \
+            -p 18080:8080 \
+            -v /tmp/cashcompass-release-pr-data:/data \
+            cashcompass-release-pr:${{ github.event.pull_request.number }}
+
+          trap 'docker logs cashcompass-release-pr-smoke; docker stop cashcompass-release-pr-smoke' EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/healthz >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:18080/healthz
+          curl -fsS http://127.0.0.1:18080/dashboard >/dev/null
+          test -f /tmp/cashcompass-release-pr-data/cashcompass.db
+
+          docker stop cashcompass-release-pr-smoke
+          trap - EXIT
