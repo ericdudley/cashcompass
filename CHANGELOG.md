@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/ericdudley/cashcompass/compare/v0.3.0...v0.4.0) (2026-04-20)
+
+
+### Features
+
+* Better export ([1455b88](https://github.com/ericdudley/cashcompass/commit/1455b88d775573c554774821aa2139857dda39a7))
+* New workflows ([df107e8](https://github.com/ericdudley/cashcompass/commit/df107e8adba025fc324f4e5169b03203ceb6953b))
+
+
+### Bug Fixes
+
+* Remove old golang server ([fe94729](https://github.com/ericdudley/cashcompass/commit/fe947297e97f058c71968158787f950dd4abad3f))
+
 ## [0.3.0](https://github.com/ericdudley/cashcompass/compare/v0.2.0...v0.3.0) (2026-04-19)
 
 
