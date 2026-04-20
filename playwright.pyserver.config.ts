@@ -10,7 +10,7 @@ export default defineConfig({
 		reuseExistingServer: false,
 		timeout: 30000,
 	},
-	testDir: 'tests/server',
+	testDir: 'e2e-tests',
 	testMatch: /(.+\.)?(test|spec)\.[jt]s/,
 	workers: 1,
 	use: { baseURL: `http://localhost:${TEST_PORT}` },

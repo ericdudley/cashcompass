@@ -2,8 +2,6 @@
 
 CashCompass is a personal finance tracker built on the Python/FastHTML app in `src/`.
 
-The legacy Go app in `server/` is still kept in the repo as a behavioral reference during the migration, but the Python app is now the primary development and deployment target.
-
 ## Primary Stack
 
 - **Backend**: Python, FastHTML, SQLite
@@ -33,17 +31,16 @@ Local environment variables can be stored in `.env`; copy `.env.example` and set
 Run the primary Python Playwright suite:
 
 ```bash
-make test
+make pw
 ```
 
 Useful targets:
 
 ```bash
-make test-e2e-py
-make test-e2e-ui-py
-make dev-go
-make test-go
-make test-e2e-go
+make dev
+make pw
+make pw-ui
+npm run test:e2e
 ```
 
 ## Environment Variables
@@ -77,10 +74,9 @@ The published image preserves the existing runtime contract:
 - database at `/data/cashcompass.db`
 - persistent `/data` volume
 
-## Legacy Go Reference
+## Repository Layout
 
-The Go server remains available for comparison while the migration settles:
-
-- `server/` contains the legacy implementation
-- `make dev-go` runs the Go app
-- `make test-go` and `make test-e2e-go` exercise legacy coverage
+- `src/` contains the application code
+- `static/` contains CSS and static assets
+- `e2e-tests/` contains Playwright specs, fixtures, and page objects
+- `playwright.pyserver.config.ts` is the only supported Playwright config

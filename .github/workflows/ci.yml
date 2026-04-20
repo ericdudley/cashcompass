@@ -29,4 +29,4 @@ jobs:
 
       - run: npx playwright install --with-deps chromium
 
-      - run: make test
+      - run: make pw

@@ -3,7 +3,8 @@
 	"version": "0.0.3",
 	"private": true,
 	"scripts": {
-		"test:server": "rm -f /tmp/cashcompass_test.db && playwright test --config playwright.server.config.ts --reporter=list"
+		"test:e2e": "rm -f /tmp/cashcompass_py_test.db && playwright test --config playwright.pyserver.config.ts --reporter=list",
+		"test:e2e:ui": "playwright test --config playwright.pyserver.config.ts --ui"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.51.1"

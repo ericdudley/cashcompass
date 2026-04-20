@@ -2,13 +2,11 @@
 
 ## Current State
 
-This repo is in the middle of a migration from the legacy Go server to a new Python/FastHTML app.
+This repo is Python/FastHTML only.
 
-- Prefer the Python app under `src/` for current feature work.
-- Treat the Go app under `server/` as the legacy implementation and a reference for behavior, copy, and test intent.
-- The Playwright suites in `tests/server/` are being updated to run against the Python app via `playwright.pyserver.config.ts`.
-
-When working on a feature, check whether the relevant code path already exists in `src/` before editing the Go version.
+- Feature work should target the app under `src/`.
+- End-to-end coverage lives in `e2e-tests/` and runs through `playwright.pyserver.config.ts`.
+- There is no supported legacy server path in this repo anymore.
 
 ## Repo Layout
 
@@ -24,16 +22,14 @@ cashcompass/
 │   ├── routes/                    # HTTP routes and HTMX endpoints
 │   ├── components/                # FastHTML UI components/pages/partials
 │   └── utils/                     # Formatting and date helpers
-├── tests/server/                  # Playwright E2E tests and page objects
+├── e2e-tests/                     # Playwright E2E tests and page objects
 │   ├── fixtures.ts                # Resets the DB through /dev/reset before each test
 │   ├── pages/                     # Page-object models
 │   └── *.spec.ts                  # Feature specs
 ├── static/                        # Static assets served by the Python app
 ├── playwright.pyserver.config.ts  # Playwright config for the Python/FastHTML app
-├── playwright.server.config.ts    # Playwright config for the legacy Go server
-└── server/                        # Legacy Go implementation
-    ├── cmd/server/main.go
-    └── internal/
+├── Dockerfile
+└── Makefile
 ```
 
 ## Python App Architecture
@@ -93,25 +89,13 @@ npx playwright test --config playwright.pyserver.config.ts
 Run one spec:
 
 ```bash
-npx playwright test --config playwright.pyserver.config.ts tests/server/categories.spec.ts
+npx playwright test --config playwright.pyserver.config.ts e2e-tests/categories.spec.ts
 ```
 
 Run one test in isolation:
 
 ```bash
-npx playwright test --config playwright.pyserver.config.ts tests/server/categories.spec.ts --grep "create category" --project=desktop
-```
-
-Legacy Go Playwright tests:
-
-```bash
-npx playwright test --config playwright.server.config.ts
-```
-
-Legacy Go unit tests:
-
-```bash
-cd server && go test ./...
+npx playwright test --config playwright.pyserver.config.ts e2e-tests/categories.spec.ts --grep "create category" --project=desktop
 ```
 
 ## FastHTML Conventions
@@ -162,19 +146,19 @@ FastHTML renders these to normal `hx-*` attributes in HTML.
 
 ## Playwright Guidance
 
-The current E2E coverage lives in `tests/server/`, even though the active app under test may be Python.
+The current E2E coverage lives in `e2e-tests/`.
 
 Before changing tests:
 
-- Confirm which Playwright config is being used.
-- Check the actual rendered FastHTML DOM instead of assuming legacy Go selectors still apply.
-- Prefer updating page objects in `tests/server/pages/` instead of duplicating selectors in specs.
+- Use `playwright.pyserver.config.ts`.
+- Check the actual rendered FastHTML DOM instead of assuming an older selector still applies.
+- Prefer updating page objects in `e2e-tests/pages/` instead of duplicating selectors in specs.
 
 Current Python test harness details:
 
 - `playwright.pyserver.config.ts` runs the Python app on port `18081`
 - It uses `/tmp/cashcompass_py_test.db`
-- `tests/server/fixtures.ts` resets state before each test by POSTing to `/dev/reset`
+- `e2e-tests/fixtures.ts` resets state before each test by POSTing to `/dev/reset`
 - Tests require `CASHCOMPASS_DEV=true` so the reset endpoint exists
 
 ## Data Integrity Notes
@@ -185,8 +169,6 @@ Some service-layer responsibilities are easy to miss during migration:
 - Renaming a category should sync `transactions.category_label`
 - Deleting a category should also clear `transactions.category_id` and `transactions.category_label`
 - Validation belongs in the service layer when possible, with the route converting expected validation failures into HTTP responses
-
-When porting behavior from Go to Python, compare both the user-visible UI flow and the side effects on related transaction records.
 
 ## Adding or Updating a Feature in the Python App
 
@@ -206,30 +188,10 @@ For UI work, prefer this sequence:
 4. Re-run the isolated test
 5. Expand to the full feature spec
 
-## Legacy Go App
-
-The Go app still exists under `server/` and is useful as a behavioral reference.
-
-High-level Go structure:
-
-- `server/internal/model/`
-- `server/internal/repository/`
-- `server/internal/service/`
-- `server/internal/handler/`
-- `server/internal/web/templates/`
-
-Use the Go code when you need to:
-
-- Compare legacy behavior during migration
-- Check copy, layout, or endpoint intent
-- Understand what an existing Playwright test was originally written against
-
-Do not assume instructions written for the Go app apply unchanged to the Python app.
-
 ## Practical Workflow Tips
 
 - Check `git status` before editing because the migration branch may already be dirty.
-- Prefer small focused Playwright runs while migrating selectors and HTMX behavior.
+- Prefer small focused Playwright runs while updating selectors and HTMX behavior.
 - If an HTMX action swaps in an entire page unexpectedly, inspect route method declarations first.
 - If a FastHTML component seems to stringify oddly in a quick REPL print, use `to_xml(...)` to inspect the rendered HTML.
 - Use seeded data expectations carefully: the Python app seeds accounts, categories, and transactions on an empty DB.
