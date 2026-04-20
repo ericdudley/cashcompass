@@ -1,11 +1,13 @@
 from __future__ import annotations
 from src.db import Database
 from src.models import Account
+from src.utils.ids import generate_uid
 
 
 def _row_to_account(row) -> Account:
     return Account(
         id=row["id"],
+        uid=row["uid"],
         label=row["label"],
         account_type=row["account_type"],
         is_archived=bool(row["is_archived"]),
@@ -20,13 +22,13 @@ class AccountRepository:
 
     def list(self) -> list[Account]:
         rows = self.db.execute(
-            "SELECT id, label, account_type, is_archived, created_at, updated_at FROM accounts ORDER BY is_archived ASC, label ASC"
+            "SELECT id, uid, label, account_type, is_archived, created_at, updated_at FROM accounts ORDER BY is_archived ASC, label ASC"
         ).fetchall()
         return [_row_to_account(r) for r in rows]
 
     def get_by_id(self, id: int) -> Account:
         row = self.db.execute(
-            "SELECT id, label, account_type, is_archived, created_at, updated_at FROM accounts WHERE id = ?", [id]
+            "SELECT id, uid, label, account_type, is_archived, created_at, updated_at FROM accounts WHERE id = ?", [id]
         ).fetchone()
         if row is None:
             raise ValueError(f"account {id} not found")
@@ -34,7 +36,8 @@ class AccountRepository:
 
     def create(self, label: str, account_type: str) -> Account:
         cur = self.db.execute(
-            "INSERT INTO accounts (label, account_type) VALUES (?, ?)", [label, account_type]
+            "INSERT INTO accounts (uid, label, account_type) VALUES (?, ?, ?)",
+            [generate_uid("acct"), label, account_type],
         )
         self.db.commit()
         return self.get_by_id(cur.lastrowid)

@@ -1,0 +1,81 @@
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, color-mix(in oklab, var(--color-primary) 14%, transparent), transparent 32%),
+    color-mix(in oklab, var(--color-base-100) 96%, black 4%);
+  color: var(--color-base-content);
+}
+
+main {
+  position: relative;
+}
+
+.cc-glass {
+  background: color-mix(in oklab, var(--color-base-100) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-base-300) 70%, transparent);
+  box-shadow: 0 18px 60px color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.cc-page-title {
+  letter-spacing: -0.03em;
+}
+
+.cc-muted {
+  color: color-mix(in oklab, var(--color-base-content) 60%, transparent);
+}
+
+.cc-subtle {
+  color: color-mix(in oklab, var(--color-base-content) 42%, transparent);
+}
+
+.cc-crud-layout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.cc-crud-sidebar,
+.cc-crud-main {
+  min-width: 0;
+}
+
+.cc-crud-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-base-100) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-base-300) 70%, transparent);
+  box-shadow: 0 18px 60px color-mix(in oklab, var(--color-base-content) 8%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.cc-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cc-form-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 0.25rem;
+}
+
+@media (min-width: 1024px) {
+  .cc-crud-layout {
+    grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .cc-crud-sidebar {
+    position: sticky;
+    top: 6rem;
+  }
+}

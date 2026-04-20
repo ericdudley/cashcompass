@@ -1,2 +1,4 @@
 python-fasthtml>=0.12
 uvicorn[standard]>=0.30
+anthropic>=0.67
+python-dotenv>=1.0

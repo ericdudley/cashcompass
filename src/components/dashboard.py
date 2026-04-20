@@ -24,82 +24,81 @@ NW_COLORS = [
 
 def dashboard_page(data: dict):
     # Summary stats
-    change_cls = "text-emerald-400" if data.get("expense_change_pos") else "text-rose-400"
+    change_cls = "text-success" if data.get("expense_change_pos") else "text-error"
     change_p = P(f"{data['expense_change_pct']} vs last month", cls=f"text-xs {change_cls}") if data.get("expense_change_pct") else ""
 
     summary = Section(
         Div(
-            P("This Month", cls="text-xs uppercase tracking-wider text-slate-400"),
-            P(data["this_month_expenses"], cls="text-2xl font-semibold text-white"),
+            P("This Month", cls="text-xs uppercase tracking-wider cc-subtle"),
+            P(data["this_month_expenses"], cls="text-2xl font-semibold text-base-content"),
             change_p,
             data_testid="stat-this-month",
-            cls="rounded-xl bg-slate-800/60 p-4 space-y-1",
+            cls="cc-glass rounded-xl p-4 space-y-1",
         ),
         Div(
-            P("Monthly Avg", cls="text-xs uppercase tracking-wider text-slate-400"),
-            P(data["avg_monthly_expenses"], cls="text-2xl font-semibold text-white"),
-            P("full months only", cls="text-xs text-slate-500"),
-            cls="rounded-xl bg-slate-800/60 p-4 space-y-1",
+            P("Monthly Avg", cls="text-xs uppercase tracking-wider cc-subtle"),
+            P(data["avg_monthly_expenses"], cls="text-2xl font-semibold text-base-content"),
+            P("full months only", cls="text-xs cc-muted"),
+            cls="cc-glass rounded-xl p-4 space-y-1",
         ),
         Div(
-            P("Net Worth", cls="text-xs uppercase tracking-wider text-slate-400"),
-            P(data["current_net_worth"], cls="text-2xl font-semibold text-white"),
-            cls="rounded-xl bg-slate-800/60 p-4 space-y-1 col-span-2",
+            P("Net Worth", cls="text-xs uppercase tracking-wider cc-subtle"),
+            P(data["current_net_worth"], cls="text-2xl font-semibold text-base-content"),
+            cls="cc-glass rounded-xl p-4 space-y-1 col-span-2",
         ),
         data_testid="summary-stats",
         cls="grid grid-cols-2 md:grid-cols-4 gap-4",
     )
 
     # Expense bars
-    expense_bars_html = ""
     if data.get("expense_bars"):
         bar_divs = []
         for bar in data["expense_bars"]:
             bar_divs.append(
                 Div(
                     Span(bar["amt_fmt"],
-                         cls="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-xs text-slate-200 bg-slate-700 rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"),
-                    Div(cls="w-full bg-emerald-500/70 hover:bg-emerald-400 rounded-t transition-colors",
+                         cls="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 text-xs text-base-content bg-base-300 rounded px-1.5 py-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"),
+                    Div(cls="w-full rounded-t bg-success opacity-75 transition-opacity group-hover:opacity-100",
                         style=bar["height_style"]),
                     cls="group flex-1 flex flex-col items-end justify-end relative h-full",
                 )
             )
-        month_labels = [Div(m, cls="flex-1 text-center text-xs text-slate-500 truncate") for m in data["expense_months"]]
+        month_labels = [Div(m, cls="flex-1 truncate text-center text-xs cc-subtle") for m in data["expense_months"]]
         bars_section = Div(
             Div(*bar_divs, cls="flex items-end gap-1 h-36"),
             Div(*month_labels, cls="flex gap-1 mt-1"),
-            cls="rounded-xl bg-slate-800/60 p-4",
+            cls="cc-glass rounded-xl p-4",
         )
     else:
-        bars_section = P("No expense data yet. Add some transactions to see your spending trends.", cls="text-slate-500 text-sm")
+        bars_section = P("No expense data yet. Add some transactions to see your spending trends.", cls="text-sm cc-muted")
 
     # Category table
     cat_table = ""
     if data.get("cat_month_rows"):
-        header_cells = [Th("Category", cls="px-4 py-2 text-left font-medium text-slate-400")]
+        header_cells = [Th("Category", cls="px-4 py-2 text-left font-medium cc-muted")]
         for m in data["cat_months"]:
-            header_cells.append(Th(m, cls="px-3 py-2 text-right font-medium text-slate-400"))
-        header_cells.append(Th("Total", cls="px-4 py-2 text-right font-medium text-slate-400"))
+            header_cells.append(Th(m, cls="px-3 py-2 text-right font-medium cc-muted"))
+        header_cells.append(Th("Total", cls="px-4 py-2 text-right font-medium cc-muted"))
 
         body_rows = []
         for row in data["cat_month_rows"]:
-            cells = [Td(row["category"], cls="px-4 py-2 text-slate-200")]
+            cells = [Td(row["category"], cls="px-4 py-2 text-base-content")]
             for t in row["totals"]:
-                cells.append(Td(t, cls="px-3 py-2 text-right text-slate-300"))
-            cells.append(Td(row["total"], cls="px-4 py-2 text-right font-medium text-slate-100"))
-            body_rows.append(Tr(*cells, cls="border-b border-slate-700/50 hover:bg-slate-700/30"))
+                cells.append(Td(t, cls="px-3 py-2 text-right cc-muted"))
+            cells.append(Td(row["total"], cls="px-4 py-2 text-right font-medium text-base-content"))
+            body_rows.append(Tr(*cells, cls="border-b border-base-300/70 hover:bg-base-200/60"))
 
         cat_table = Div(
             Table(
-                Thead(Tr(*header_cells, cls="border-b border-slate-700")),
+                Thead(Tr(*header_cells, cls="border-b border-base-300")),
                 Tbody(*body_rows),
-                cls="w-full text-sm",
+                cls="table w-full text-sm",
             ),
-            cls="overflow-x-auto rounded-xl bg-slate-800/60",
+            cls="cc-glass overflow-x-auto rounded-xl",
         )
 
     expenses_section = Section(
-        H2("Expenses", cls="text-xl font-semibold text-white"),
+        H2("Expenses", cls="text-xl font-semibold text-base-content"),
         bars_section,
         cat_table,
         data_testid="expenses-section",
@@ -125,7 +124,7 @@ def dashboard_page(data: dict):
             legends.append(
                 Div(
                     Span(cls="inline-block h-2 w-5 rounded", style=f"background:{line['color']}"),
-                    Span(line["label"], cls="text-xs text-slate-400"),
+                    Span(line["label"], cls="text-xs cc-muted"),
                     cls="flex items-center gap-1.5",
                 )
             )
@@ -134,37 +133,37 @@ def dashboard_page(data: dict):
             Svg(*polylines, viewBox="0 0 400 150", cls="w-full h-40", preserveAspectRatio="none"),
             Div(*legends, cls="flex flex-wrap gap-4 mt-2"),
             data_testid="net-worth-chart",
-            cls="rounded-xl bg-slate-800/60 p-4",
+            cls="cc-glass rounded-xl p-4",
         )
 
     # Net worth table
     nw_table = ""
     if data.get("nw_table_rows"):
-        header_cells = [Th("Account", cls="px-4 py-2 text-left font-medium text-slate-400")]
+        header_cells = [Th("Account", cls="px-4 py-2 text-left font-medium cc-muted")]
         for m in data["nw_months"]:
-            header_cells.append(Th(m, cls="px-3 py-2 text-right font-medium text-slate-400"))
+            header_cells.append(Th(m, cls="px-3 py-2 text-right font-medium cc-muted"))
 
         body_rows = []
         for row in data["nw_table_rows"]:
-            cells = [Td(row["label"], cls="px-4 py-2 text-slate-200")]
+            cells = [Td(row["label"], cls="px-4 py-2 text-base-content")]
             for b in row["balances"]:
-                cells.append(Td(b, cls="px-3 py-2 text-right text-slate-300"))
-            body_rows.append(Tr(*cells, cls="border-b border-slate-700/50 hover:bg-slate-700/30"))
+                cells.append(Td(b, cls="px-3 py-2 text-right cc-muted"))
+            body_rows.append(Tr(*cells, cls="border-b border-base-300/70 hover:bg-base-200/60"))
 
         nw_table = Div(
             Table(
-                Thead(Tr(*header_cells, cls="border-b border-slate-700")),
+                Thead(Tr(*header_cells, cls="border-b border-base-300")),
                 Tbody(*body_rows),
-                cls="w-full text-sm",
+                cls="table w-full text-sm",
             ),
             data_testid="net-worth-table",
-            cls="overflow-x-auto rounded-xl bg-slate-800/60",
+            cls="cc-glass overflow-x-auto rounded-xl",
         )
     else:
-        nw_table = P("No net worth data yet. Import account balances or add net worth transactions.", cls="text-slate-500 text-sm")
+        nw_table = P("No net worth data yet. Import account balances or add net worth transactions.", cls="text-sm cc-muted")
 
     nw_section = Section(
-        H2("Net Worth", cls="text-xl font-semibold text-white"),
+        H2("Net Worth", cls="text-xl font-semibold text-base-content"),
         nw_chart,
         nw_table,
         data_testid="net-worth-section",
@@ -172,7 +171,7 @@ def dashboard_page(data: dict):
     )
 
     return (
-        Header(H1("Dashboard", cls="text-4xl font-semibold text-white"), cls="space-y-2"),
+        Header(H1("Dashboard", cls="cc-page-title text-4xl font-semibold text-base-content"), cls="space-y-2"),
         summary,
         expenses_section,
         nw_section,

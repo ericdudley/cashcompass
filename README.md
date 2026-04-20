@@ -26,6 +26,8 @@ CASHCOMPASS_DEV=true .venv/bin/python -m uvicorn src.main:app --port 8080 --relo
 
 The app runs at `http://localhost:8080`.
 
+Local environment variables can be stored in `.env`; copy `.env.example` and set `ANTHROPIC_API_KEY` there when you want AI category recommendations enabled in the transaction form.
+
 ## Testing
 
 Run the primary Python Playwright suite:
@@ -52,6 +54,7 @@ make test-e2e-go
 | `CASHCOMPASS_MIGRATIONS_PATH` | `./src/migrations` | SQL migrations path |
 | `CASHCOMPASS_PORT` | `8080` | HTTP listen port |
 | `CASHCOMPASS_DEV` | unset | Enables dev-only routes such as `/dev/reset` when `true` |
+| `ANTHROPIC_API_KEY` | unset | Enables Anthropic Haiku category recommendations on the transaction create form |
 
 ## Docker
 

@@ -39,7 +39,8 @@ test('dashboard nav link is active on dashboard page', async ({ page }) => {
 	const dp = new DashboardPage(page);
 	await dp.goto();
 	const dashLink = page.locator('nav a[href="/dashboard"]').first();
-	await expect(dashLink).toHaveClass(/text-emerald-400/);
+	await expect(dashLink).toHaveClass(/text-primary/);
+	await expect(dashLink).toHaveClass(/font-semibold/);
 });
 
 test('category table shows rows when expense transactions exist', async ({ page }) => {
@@ -62,19 +63,54 @@ test('category table shows rows when expense transactions exist', async ({ page 
 });
 
 test('dashboard renders imported net worth history without errors', async ({ page, request }) => {
-	const csv = [
-		'Account,Date,Balance',
-		'Brokerage,2026-03-15,1000.00',
-		'Brokerage,2026-04-15T23:30:00-07:00,1250.50'
-	].join('\n');
-
-	const response = await request.post('/settings/import/accounts', {
+	const response = await request.post('/settings/import/backup', {
 		multipart: {
-			timezone: 'America/Los_Angeles',
 			file: {
-				name: 'accounts.csv',
-				mimeType: 'text/csv',
-				buffer: Buffer.from(csv)
+				name: 'backup.json',
+				mimeType: 'application/json',
+				buffer: Buffer.from(JSON.stringify({
+					format: 'cashcompass.backup',
+					version: 1,
+					exported_at: '2026-04-19T12:34:56Z',
+					app: { name: 'CashCompass' },
+					schema: { entities: ['accounts', 'categories', 'transactions'] },
+					accounts: [
+						{
+							id: 'acct_brokerage',
+							legacy_numeric_id: 10,
+							label: 'Brokerage',
+							account_type: 'net_worth',
+							is_archived: false,
+							created_at: '2026-03-15T00:00:00Z',
+							updated_at: '2026-04-15T23:30:00Z'
+						}
+					],
+					categories: [],
+					transactions: [
+						{
+							id: 'txn_brokerage_1',
+							legacy_numeric_id: 20,
+							occurred_at: '2026-03-15',
+							amount_cents: 100000,
+							label: 'Initial balance',
+							account_id: 'acct_brokerage',
+							category_id: null,
+							created_at: '2026-03-15T00:00:00Z',
+							updated_at: '2026-03-15T00:00:00Z'
+						},
+						{
+							id: 'txn_brokerage_2',
+							legacy_numeric_id: 21,
+							occurred_at: '2026-04-15',
+							amount_cents: 25050,
+							label: 'Growth',
+							account_id: 'acct_brokerage',
+							category_id: null,
+							created_at: '2026-04-15T23:30:00Z',
+							updated_at: '2026-04-15T23:30:00Z'
+						}
+					]
+				}))
 			}
 		}
 	});

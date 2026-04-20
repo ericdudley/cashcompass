@@ -6,6 +6,7 @@ from typing import Optional
 @dataclass
 class Account:
     id: int = 0
+    uid: str = ""
     label: str = ""
     account_type: str = "net_worth"
     is_archived: bool = False
@@ -16,6 +17,7 @@ class Account:
 @dataclass
 class Category:
     id: int = 0
+    uid: str = ""
     label: str = ""
     created_at: str = ""
     updated_at: str = ""
@@ -24,13 +26,16 @@ class Category:
 @dataclass
 class Transaction:
     id: int = 0
+    uid: str = ""
     iso8601: str = ""
     date: str = ""
     amount: int = 0
     label: str = ""
     account_id: Optional[int] = None
+    account_uid: Optional[str] = None
     account_label: str = ""
     category_id: Optional[int] = None
+    category_uid: Optional[str] = None
     category_label: str = ""
     created_at: str = ""
     updated_at: str = ""

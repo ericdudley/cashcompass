@@ -7,12 +7,20 @@ export class SettingsPage {
 		await this.page.goto('/settings');
 	}
 
-	getExpensesSection(): Locator {
-		return this.page.locator('[data-testid="settings-expenses-section"]');
+	getThemeSection(): Locator {
+		return this.page.locator('[data-testid="settings-theme-section"]');
 	}
 
-	getAccountsSection(): Locator {
-		return this.page.locator('[data-testid="settings-accounts-section"]');
+	getBackupSection(): Locator {
+		return this.page.locator('[data-testid="settings-backup-section"]');
+	}
+
+	getTransactionsExportSection(): Locator {
+		return this.page.locator('[data-testid="settings-transactions-export-section"]');
+	}
+
+	getThemePicker(): Locator {
+		return this.page.locator('#settings-theme-picker');
 	}
 
 	getSuccessAlert(): Locator {

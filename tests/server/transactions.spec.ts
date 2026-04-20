@@ -9,6 +9,14 @@ function currentMonthDate(day = 15): string {
 	return `${year}-${month}-${String(day).padStart(2, '0')}`;
 }
 
+function formatDisplayDate(isoDate: string): string {
+	return new Date(`${isoDate}T12:00:00`).toLocaleDateString('en-US', {
+		month: 'short',
+		day: '2-digit',
+		year: 'numeric',
+	});
+}
+
 test('transactions page loads', async ({ page }) => {
 	const tp = new TransactionsPage(page);
 	await tp.goto();
@@ -24,13 +32,68 @@ test('seeded transactions appear', async ({ page }) => {
 test('default filter is this month', async ({ page }) => {
 	const tp = new TransactionsPage(page);
 	await tp.goto();
-	await expect(tp.getPresetButton('this_month')).toHaveClass(/bg-emerald-600/);
+	await expect(tp.getPresetButton('this_month')).toHaveClass(/btn-primary/);
 });
 
 test('create form is visible', async ({ page }) => {
 	const tp = new TransactionsPage(page);
 	await tp.goto();
 	await expect(tp.getForm()).toBeVisible();
+});
+
+test('category recommendation does not appear for incomplete form input', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.getForm().locator('input[name="label"]').fill('Neighborhood market');
+	await page.waitForTimeout(700);
+
+	await expect(tp.getRecommendationPanel()).toHaveCount(1);
+	await expect(tp.getRecommendationApply()).toHaveCount(0);
+});
+
+test('category recommendation appears and can be applied', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.fillCreateForm({
+		date: currentMonthDate(15),
+		label: 'Neighborhood market',
+		amount: '42.00',
+		mode: 'debit',
+	});
+
+	await expect(tp.getRecommendationApply()).toBeVisible();
+	await expect(tp.getRecommendationLabel()).toHaveText('Groceries');
+
+	await tp.applyRecommendation();
+	await expect(tp.getCreateCategorySelect()).toHaveValue('1');
+});
+
+test('user can override recommended category before submitting', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	const initialCount = await tp.getRows().count();
+
+	await tp.fillCreateForm({
+		date: currentMonthDate(16),
+		label: 'Neighborhood market',
+		amount: '18.00',
+		mode: 'debit',
+	});
+
+	await expect(tp.getRecommendationApply()).toBeVisible();
+	await tp.applyRecommendation();
+	await expect(tp.getCreateCategorySelect()).toHaveValue('1');
+
+	await tp.getCreateCategorySelect().selectOption('2');
+	await expect(tp.getCreateCategorySelect()).toHaveValue('2');
+
+	await tp.submitCreate();
+
+	await expect(tp.getRows()).toHaveCount(initialCount + 1);
+	await expect(page.locator('text=Neighborhood market')).toBeVisible();
 });
 
 test('can create a new transaction', async ({ page }) => {
@@ -73,6 +136,32 @@ test('can edit a transaction', async ({ page }) => {
 	// Should go back to row view with updated label
 	await expect(tp.getRows().first()).toBeVisible();
 	await expect(page.locator('text=Updated Label E2E')).toBeVisible();
+});
+
+test('editing a transaction date moves it to the correct date group', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await page.goto('/transactions?date_preset=all_time');
+
+	const label = 'Weekly shop';
+	const originalDate = currentMonthDate(1);
+	const targetDate = currentMonthDate(15);
+	const originalDisplayDate = formatDisplayDate(originalDate);
+	const targetDisplayDate = formatDisplayDate(targetDate);
+
+	const originalRow = tp.getRowInGroup(originalDisplayDate, label);
+	await expect(originalRow).toBeVisible();
+
+	await tp.clickEditOnRow(originalRow);
+
+	const editRow = tp.getEditRows().first();
+	await expect(editRow).toBeVisible();
+	await editRow.locator('input[name="date"]').fill(targetDate);
+	await tp.saveEditRow(editRow);
+
+	await expect(tp.getRowInGroup(targetDisplayDate, label)).toBeVisible();
+	await expect(tp.getRowInGroup(originalDisplayDate, label)).toHaveCount(0);
+	await expect(tp.getDateGroup(originalDisplayDate)).toHaveCount(0);
+	await expect(tp.getDailySubtotal(targetDisplayDate)).toHaveText('-$54.32');
 });
 
 test('can cancel editing a transaction', async ({ page }) => {
@@ -170,12 +259,7 @@ test('daily total updates after create and delete', async ({ page }) => {
 	const year = now.getFullYear();
 	const month = String(now.getMonth() + 1).padStart(2, '0');
 	const isoDate = `${year}-${month}-03`;
-	// The server formats dates as "Jan 02, 2006"
-	const fmtDate = new Date(`${isoDate}T12:00:00`).toLocaleDateString('en-US', {
-		month: 'short',
-		day: '2-digit',
-		year: 'numeric',
-	});
+	const fmtDate = formatDisplayDate(isoDate);
 
 	// Record the subtotal before (may not exist if no transactions on that day)
 	const subtotalLocator = tp.getDailySubtotal(fmtDate);
@@ -216,11 +300,11 @@ test('URL params restore filters on reload', async ({ page }) => {
 	await page.goto('/transactions?date_preset=all_time&account_type=expenses');
 
 	await expect(tp.getList()).toBeVisible();
-	await expect(tp.getPresetButton('all_time')).toHaveClass(/bg-emerald-600/);
+	await expect(tp.getPresetButton('all_time')).toHaveClass(/btn-primary/);
 
 	// Reload and verify filter is preserved
 	await page.reload();
-	await expect(tp.getPresetButton('all_time')).toHaveClass(/bg-emerald-600/);
+	await expect(tp.getPresetButton('all_time')).toHaveClass(/btn-primary/);
 });
 
 test('transaction create rejects blank labels', async ({ request }) => {

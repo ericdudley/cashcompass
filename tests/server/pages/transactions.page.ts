@@ -23,6 +23,22 @@ export class TransactionsPage {
 		return this.page.locator('#transaction-form');
 	}
 
+	getCreateCategorySelect(): Locator {
+		return this.getForm().locator('select[name="category_id"]');
+	}
+
+	getRecommendationPanel(): Locator {
+		return this.page.locator('[data-testid="transaction-category-recommendation"]');
+	}
+
+	getRecommendationApply(): Locator {
+		return this.page.locator('[data-testid="transaction-category-apply"]');
+	}
+
+	getRecommendationLabel(): Locator {
+		return this.page.locator('[data-testid="transaction-category-label"]');
+	}
+
 	async fillCreateForm(opts: {
 		date?: string;
 		label: string;
@@ -42,6 +58,10 @@ export class TransactionsPage {
 
 	async submitCreate() {
 		await this.getForm().locator('button[type="submit"]').click();
+	}
+
+	async applyRecommendation() {
+		await this.getRecommendationApply().click();
 	}
 
 	async clickEditOnRow(rowLocator: Locator) {
@@ -76,9 +96,18 @@ export class TransactionsPage {
 
 	// Returns the subtotal element for a given date group (date formatted as "Jan 02, 2006")
 	getDailySubtotal(formattedDate: string): Locator {
-		return this.page
-			.locator('section')
-			.filter({ has: this.page.locator(`h2:has-text("${formattedDate}")`) })
-			.locator('div.flex.justify-between > span.font-mono');
+		return this.page.locator(
+			`[data-testid="transaction-group"][data-date="${formattedDate}"] [data-testid="transaction-subtotal"]`
+		);
+	}
+
+	getDateGroup(formattedDate: string): Locator {
+		return this.page.locator(`[data-testid="transaction-group"][data-date="${formattedDate}"]`);
+	}
+
+	getRowInGroup(formattedDate: string, label: string): Locator {
+		return this.getDateGroup(formattedDate)
+			.locator('[data-testid="transaction-row"]')
+			.filter({ hasText: label });
 	}
 }

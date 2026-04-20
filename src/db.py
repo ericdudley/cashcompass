@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
+from src.utils.ids import generate_uid
 
 
 class Database:
@@ -45,14 +46,23 @@ def seed_if_empty(db: Database):
     if count > 0:
         return False
 
-    db.execute("INSERT INTO accounts (label, account_type) VALUES ('Checking', 'net_worth')")
-    db.execute("INSERT INTO accounts (label, account_type) VALUES ('Savings', 'net_worth')")
-    db.execute("INSERT INTO accounts (label, account_type) VALUES ('Daily Expenses', 'expenses')")
+    db.execute(
+        "INSERT INTO accounts (uid, label, account_type) VALUES (?, 'Checking', 'net_worth')",
+        [generate_uid("acct")],
+    )
+    db.execute(
+        "INSERT INTO accounts (uid, label, account_type) VALUES (?, 'Savings', 'net_worth')",
+        [generate_uid("acct")],
+    )
+    db.execute(
+        "INSERT INTO accounts (uid, label, account_type) VALUES (?, 'Daily Expenses', 'expenses')",
+        [generate_uid("acct")],
+    )
     db.commit()
 
-    db.execute("INSERT INTO categories (label) VALUES ('Groceries')")
-    db.execute("INSERT INTO categories (label) VALUES ('Utilities')")
-    db.execute("INSERT INTO categories (label) VALUES ('Transport')")
+    db.execute("INSERT INTO categories (uid, label) VALUES (?, 'Groceries')", [generate_uid("cat")])
+    db.execute("INSERT INTO categories (uid, label) VALUES (?, 'Utilities')", [generate_uid("cat")])
+    db.execute("INSERT INTO categories (uid, label) VALUES (?, 'Transport')", [generate_uid("cat")])
     db.commit()
 
     daily_id = db.execute("SELECT id FROM accounts WHERE label = 'Daily Expenses'").fetchone()[0]
@@ -72,16 +82,28 @@ def seed_if_empty(db: Database):
     d3_iso, d3_ymd = d(3)
 
     db.execute(
-        "INSERT INTO transactions (iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label) VALUES (?, ?, -5432, 'Weekly shop', ?, 'Daily Expenses', ?, 'Groceries')",
-        [d1_iso, d1_ymd, daily_id, groc_id],
+        """
+        INSERT INTO transactions (
+            uid, iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label
+        ) VALUES (?, ?, ?, -5432, 'Weekly shop', ?, 'Daily Expenses', ?, 'Groceries')
+        """,
+        [generate_uid("txn"), d1_iso, d1_ymd, daily_id, groc_id],
     )
     db.execute(
-        "INSERT INTO transactions (iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label) VALUES (?, ?, -9800, 'Electric bill', ?, 'Daily Expenses', ?, 'Utilities')",
-        [d2_iso, d2_ymd, daily_id, util_id],
+        """
+        INSERT INTO transactions (
+            uid, iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label
+        ) VALUES (?, ?, ?, -9800, 'Electric bill', ?, 'Daily Expenses', ?, 'Utilities')
+        """,
+        [generate_uid("txn"), d2_iso, d2_ymd, daily_id, util_id],
     )
     db.execute(
-        "INSERT INTO transactions (iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label) VALUES (?, ?, -3200, 'Bus pass', ?, 'Daily Expenses', ?, 'Transport')",
-        [d3_iso, d3_ymd, daily_id, trans_id],
+        """
+        INSERT INTO transactions (
+            uid, iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label
+        ) VALUES (?, ?, ?, -3200, 'Bus pass', ?, 'Daily Expenses', ?, 'Transport')
+        """,
+        [generate_uid("txn"), d3_iso, d3_ymd, daily_id, trans_id],
     )
     db.commit()
     return True

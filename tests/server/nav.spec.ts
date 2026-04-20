@@ -22,17 +22,19 @@ test('nav links to accounts and categories from home', async ({ page }) => {
 test('accounts link is active on accounts page', async ({ page }) => {
 	await page.goto('/accounts');
 	const accountsLink = page.locator('nav a[href="/accounts"]').first();
-	await expect(accountsLink).toHaveClass(/text-emerald-400/);
+	await expect(accountsLink).toHaveClass(/text-primary/);
+	await expect(accountsLink).toHaveClass(/font-semibold/);
 	const categoriesLink = page.locator('nav a[href="/categories"]').first();
-	await expect(categoriesLink).not.toHaveClass(/text-emerald-400/);
+	await expect(categoriesLink).not.toHaveClass(/font-semibold/);
 });
 
 test('categories link is active on categories page', async ({ page }) => {
 	await page.goto('/categories');
 	const categoriesLink = page.locator('nav a[href="/categories"]').first();
-	await expect(categoriesLink).toHaveClass(/text-emerald-400/);
+	await expect(categoriesLink).toHaveClass(/text-primary/);
+	await expect(categoriesLink).toHaveClass(/font-semibold/);
 	const accountsLink = page.locator('nav a[href="/accounts"]').first();
-	await expect(accountsLink).not.toHaveClass(/text-emerald-400/);
+	await expect(accountsLink).not.toHaveClass(/font-semibold/);
 });
 
 test('nav brand link navigates to dashboard', async ({ page }) => {

@@ -2,20 +2,39 @@ from __future__ import annotations
 from typing import Optional
 from src.db import Database
 from src.models import Transaction, TransactionFilter, MonthSum, AccountMonthBalance
+from src.utils.ids import generate_uid
 
-_COLS = "id, iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label, created_at, updated_at"
+_COLS = """
+    t.id,
+    t.uid,
+    t.iso8601,
+    t.yyyy_mm_dd,
+    t.amount,
+    t.label,
+    t.account_id,
+    a.uid AS account_uid,
+    t.account_label,
+    t.category_id,
+    c.uid AS category_uid,
+    t.category_label,
+    t.created_at,
+    t.updated_at
+"""
 
 
 def _row_to_txn(row) -> Transaction:
     return Transaction(
         id=row["id"],
+        uid=row["uid"] or "",
         iso8601=row["iso8601"] or "",
         date=row["yyyy_mm_dd"] or "",
         amount=row["amount"],
         label=row["label"] or "",
         account_id=row["account_id"],
+        account_uid=row["account_uid"],
         account_label=row["account_label"] or "",
         category_id=row["category_id"],
+        category_uid=row["category_uid"],
         category_label=row["category_label"] or "",
         created_at=row["created_at"] or "",
         updated_at=row["updated_at"] or "",
@@ -27,37 +46,62 @@ class TransactionRepository:
         self.db = db
 
     def list(self, f: TransactionFilter) -> list[Transaction]:
-        sql = f"SELECT {_COLS} FROM transactions WHERE 1=1"
+        sql = f"""
+            SELECT {_COLS}
+            FROM transactions t
+            LEFT JOIN accounts a ON t.account_id = a.id
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE 1=1
+        """
         args = []
 
         if f.date_from:
-            sql += " AND yyyy_mm_dd >= ?"
+            sql += " AND t.yyyy_mm_dd >= ?"
             args.append(f.date_from)
         if f.date_to:
-            sql += " AND yyyy_mm_dd <= ?"
+            sql += " AND t.yyyy_mm_dd <= ?"
             args.append(f.date_to)
         if f.label:
-            sql += " AND label LIKE ?"
+            sql += " AND t.label LIKE ?"
             args.append(f"%{f.label}%")
         if f.account_ids:
             placeholders = ",".join("?" * len(f.account_ids))
-            sql += f" AND account_id IN ({placeholders})"
+            sql += f" AND t.account_id IN ({placeholders})"
             args.extend(f.account_ids)
         if f.category_ids:
             placeholders = ",".join("?" * len(f.category_ids))
-            sql += f" AND category_id IN ({placeholders})"
+            sql += f" AND t.category_id IN ({placeholders})"
             args.extend(f.category_ids)
         if f.account_type:
-            sql += " AND account_id IN (SELECT id FROM accounts WHERE account_type = ?)"
+            sql += " AND t.account_id IN (SELECT id FROM accounts WHERE account_type = ?)"
             args.append(f.account_type)
 
-        sql += " ORDER BY yyyy_mm_dd DESC, id DESC"
+        sql += " ORDER BY t.yyyy_mm_dd DESC, t.id DESC"
         rows = self.db.execute(sql, args).fetchall()
+        return [_row_to_txn(r) for r in rows]
+
+    def list_all(self) -> list[Transaction]:
+        rows = self.db.execute(
+            f"""
+            SELECT {_COLS}
+            FROM transactions t
+            LEFT JOIN accounts a ON t.account_id = a.id
+            LEFT JOIN categories c ON t.category_id = c.id
+            ORDER BY t.id ASC
+            """
+        ).fetchall()
         return [_row_to_txn(r) for r in rows]
 
     def get_by_id(self, id: int) -> Transaction:
         row = self.db.execute(
-            f"SELECT {_COLS} FROM transactions WHERE id = ?", [id]
+            f"""
+            SELECT {_COLS}
+            FROM transactions t
+            LEFT JOIN accounts a ON t.account_id = a.id
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.id = ?
+            """,
+            [id],
         ).fetchone()
         if row is None:
             raise ValueError(f"transaction {id} not found")
@@ -67,8 +111,20 @@ class TransactionRepository:
                account_id: Optional[int], account_label: str,
                category_id: Optional[int], category_label: str) -> Transaction:
         cur = self.db.execute(
-            "INSERT INTO transactions (iso8601, yyyy_mm_dd, amount, label, account_id, account_label, category_id, category_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [iso8601, date, amount, label, account_id, account_label, category_id, category_label],
+            """
+            INSERT INTO transactions (
+                uid,
+                iso8601,
+                yyyy_mm_dd,
+                amount,
+                label,
+                account_id,
+                account_label,
+                category_id,
+                category_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [generate_uid("txn"), iso8601, date, amount, label, account_id, account_label, category_id, category_label],
         )
         self.db.commit()
         return self.get_by_id(cur.lastrowid)
