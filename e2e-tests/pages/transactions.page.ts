@@ -23,8 +23,48 @@ export class TransactionsPage {
 		return this.page.locator('#transaction-form');
 	}
 
+	getCreateDateInput(): Locator {
+		return this.getForm().locator('input[name="date"]');
+	}
+
+	getCreateLabelInput(): Locator {
+		return this.getForm().locator('input[name="label"]');
+	}
+
+	getCreateAmountInput(): Locator {
+		return this.getForm().locator('input[name="amount"]');
+	}
+
+	getCreateAmountModeSelect(): Locator {
+		return this.getForm().locator('select[name="amount_mode"]');
+	}
+
+	getCreateAccountSelect(): Locator {
+		return this.getForm().locator('select[name="account_id"]');
+	}
+
 	getCreateCategorySelect(): Locator {
 		return this.getForm().locator('select[name="category_id"]');
+	}
+
+	getCreateStatus(): Locator {
+		return this.page.locator('[data-testid="transaction-form-status"]');
+	}
+
+	getDateTodayButton(): Locator {
+		return this.page.locator('[data-testid="transaction-date-today"]');
+	}
+
+	getDateNotice(): Locator {
+		return this.page.locator('[data-testid="transaction-date-notice"]');
+	}
+
+	getDateNoticeUseToday(): Locator {
+		return this.page.locator('[data-testid="transaction-date-use-today"]');
+	}
+
+	getDateNoticeKeepDate(): Locator {
+		return this.page.locator('[data-testid="transaction-date-keep"]');
 	}
 
 	getRecommendationPanel(): Locator {
@@ -44,6 +84,8 @@ export class TransactionsPage {
 		label: string;
 		amount: string;
 		mode?: 'debit' | 'credit';
+		categoryId?: string;
+		accountId?: string;
 	}) {
 		const form = this.getForm();
 		if (opts.date) {
@@ -53,6 +95,12 @@ export class TransactionsPage {
 		await form.locator('input[name="amount"]').fill(opts.amount);
 		if (opts.mode) {
 			await form.locator('select[name="amount_mode"]').selectOption(opts.mode);
+		}
+		if (opts.categoryId) {
+			await form.locator('select[name="category_id"]').selectOption(opts.categoryId);
+		}
+		if (opts.accountId) {
+			await form.locator('select[name="account_id"]').selectOption(opts.accountId);
 		}
 	}
 

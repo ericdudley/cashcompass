@@ -168,23 +168,44 @@ def transaction_form(accounts: list[Account], categories: list[Category],
         Form(
             Input(type="hidden", name="account_type", value=account_type),
             Div(
-                Label("Date", cls="label-text"),
-                Input(type="date", name="date", value=today, required=True,
-                      cls="input input-bordered w-full",
-                      **_recommendation_request_attrs("change", ai_enabled)),
+                Label("Date", fr="transaction-date", cls="label-text"),
+                Div(
+                    Input(type="date", id="transaction-date", name="date", value=today, required=True,
+                          cls="input input-bordered w-full",
+                          **_recommendation_request_attrs("change", ai_enabled)),
+                    Button("Today", type="button", id="transaction-date-today",
+                           cls="btn btn-outline w-full sm:w-auto",
+                           data_testid="transaction-date-today"),
+                    cls="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]",
+                ),
+                Div(
+                    Span(id="transaction-date-notice-text"),
+                    Div(
+                        Button("Use today", type="button", id="transaction-date-use-today",
+                               cls="btn btn-xs btn-primary",
+                               data_testid="transaction-date-use-today"),
+                        Button("Keep date", type="button", id="transaction-date-keep",
+                               cls="btn btn-xs btn-ghost",
+                               data_testid="transaction-date-keep"),
+                        cls="flex shrink-0 gap-2",
+                    ),
+                    id="transaction-date-notice",
+                    data_testid="transaction-date-notice",
+                    cls="hidden items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-base-content",
+                ),
                 cls="flex flex-col gap-1",
             ),
             Div(
-                Label("Label", cls="label-text"),
-                Input(type="text", name="label", placeholder="Description", required=True,
+                Label("Label", fr="transaction-label", cls="label-text"),
+                Input(type="text", id="transaction-label", name="label", placeholder="Description", required=True,
                       cls="input input-bordered w-full",
                       **_recommendation_request_attrs("input changed delay:500ms", ai_enabled)),
                 cls="flex flex-col gap-1",
             ),
             Div(
-                Label("Amount", cls="label-text"),
+                Label("Amount", fr="transaction-amount", cls="label-text"),
                 Div(
-                    Input(type="number", name="amount", placeholder="0.00", step="0.01", min="0", required=True,
+                    Input(type="number", id="transaction-amount", name="amount", placeholder="0.00", step="0.01", min="0", required=True,
                           cls="input input-bordered w-full",
                           **_recommendation_request_attrs("input changed delay:500ms", ai_enabled)),
                     Select(
@@ -217,25 +238,188 @@ def transaction_form(accounts: list[Account], categories: list[Category],
             ),
             Div(
                 Button("Add", type="submit", cls="btn btn-primary w-full sm:w-auto"),
-                cls="cc-form-actions",
+                Span("", id="transaction-form-status",
+                     data_testid="transaction-form-status",
+                     cls="hidden text-xs cc-muted"),
+                cls="cc-form-actions items-center gap-3",
             ),
             id="transaction-form",
             hx_post="/transactions",
             hx_target="#transaction-list",
             hx_swap="outerHTML",
-            hx_on="""
-            htmx:afterRequest:
-            if(event.detail.successful){
-              var d=this.querySelector('[name=date]').value;
-              this.reset();
-              this.querySelector('[name=date]').value=d;
-              var recommendation = document.getElementById('transaction-category-recommendation');
-              if(recommendation){
-                recommendation.innerHTML = '';
-              }
-            }
-            """,
             cls="cc-form-stack",
+        ),
+        Script(
+            """
+            (() => {
+              const initTransactionForm = () => {
+                const form = document.getElementById('transaction-form');
+                if (!form || form.dataset.transactionFormReady === 'true') return;
+                form.dataset.transactionFormReady = 'true';
+
+                const dateInput = form.querySelector('input[name="date"]');
+                const labelInput = form.querySelector('input[name="label"]');
+                const amountInput = form.querySelector('input[name="amount"]');
+                const amountMode = form.querySelector('select[name="amount_mode"]');
+                const accountSelect = form.querySelector('select[name="account_id"]');
+                const categorySelect = form.querySelector('select[name="category_id"]');
+                const status = document.getElementById('transaction-form-status');
+                const todayButton = document.getElementById('transaction-date-today');
+                const notice = document.getElementById('transaction-date-notice');
+                const noticeText = document.getElementById('transaction-date-notice-text');
+                const useTodayButton = document.getElementById('transaction-date-use-today');
+                const keepDateButton = document.getElementById('transaction-date-keep');
+
+                if (!dateInput) return;
+
+                let dateDirty = false;
+                let dismissedNoticeKey = '';
+                const recommendationPanel = () => document.getElementById('transaction-category-recommendation');
+
+                const localToday = () => {
+                  const now = new Date();
+                  const month = String(now.getMonth() + 1).padStart(2, '0');
+                  const day = String(now.getDate()).padStart(2, '0');
+                  return `${now.getFullYear()}-${month}-${day}`;
+                };
+
+                const formatDate = (isoDate) => {
+                  if (!isoDate) return '';
+                  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  });
+                };
+
+                const setStatus = (message) => {
+                  if (!status) return;
+                  status.textContent = message || '';
+                  status.classList.toggle('hidden', !message);
+                };
+
+                const hideNotice = () => {
+                  if (!notice) return;
+                  notice.classList.add('hidden');
+                  notice.classList.remove('flex');
+                };
+
+                const showNotice = (selectedDate, today) => {
+                  if (!notice || !noticeText) return;
+                  noticeText.textContent = `This form is dated ${formatDate(selectedDate)}. Today is ${formatDate(today)}.`;
+                  notice.classList.remove('hidden');
+                  notice.classList.add('flex');
+                };
+
+                const setDateFromSystem = (value) => {
+                  dateInput.dataset.systemDateChange = 'true';
+                  dateInput.value = value;
+                  dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+                  delete dateInput.dataset.systemDateChange;
+                };
+
+                const hasDraft = () => {
+                  if (dateDirty) return true;
+                  if ((labelInput?.value || '').trim()) return true;
+                  if ((amountInput?.value || '').trim()) return true;
+                  return !!categorySelect && categorySelect.value !== '0';
+                };
+
+                const checkStaleDate = () => {
+                  const today = localToday();
+                  const selectedDate = dateInput.value;
+                  if (!selectedDate || selectedDate === today) {
+                    hideNotice();
+                    return;
+                  }
+
+                  const noticeKey = `${selectedDate}|${today}`;
+                  if (!hasDraft()) {
+                    setDateFromSystem(today);
+                    hideNotice();
+                    return;
+                  }
+
+                  if (dismissedNoticeKey !== noticeKey) {
+                    showNotice(selectedDate, today);
+                  }
+                };
+
+                dateInput.addEventListener('change', () => {
+                  if (dateInput.dataset.systemDateChange !== 'true') {
+                    dateDirty = true;
+                    dismissedNoticeKey = '';
+                  }
+                  if (dateInput.value === localToday()) {
+                    hideNotice();
+                  }
+                });
+
+                todayButton?.addEventListener('click', () => {
+                  setDateFromSystem(localToday());
+                  dateDirty = false;
+                  dismissedNoticeKey = '';
+                  hideNotice();
+                  setStatus('');
+                });
+
+                useTodayButton?.addEventListener('click', () => {
+                  setDateFromSystem(localToday());
+                  dateDirty = false;
+                  dismissedNoticeKey = '';
+                  hideNotice();
+                });
+
+                keepDateButton?.addEventListener('click', () => {
+                  dismissedNoticeKey = `${dateInput.value}|${localToday()}`;
+                  hideNotice();
+                });
+
+                document.body.addEventListener('htmx:beforeSwap', (event) => {
+                  const target = event.detail?.target;
+                  if (target?.id !== 'transaction-category-recommendation') return;
+                  if ((labelInput?.value || '').trim() && (amountInput?.value || '').trim()) return;
+
+                  event.detail.shouldSwap = false;
+                  target.innerHTML = '';
+                });
+
+                form.addEventListener('htmx:afterRequest', (event) => {
+                  const source = event.detail?.elt || event.target;
+                  if (source !== form || !event.detail?.successful) return;
+
+                  const preservedDate = dateInput.value;
+                  const preservedAccount = accountSelect?.value || '';
+                  const preservedMode = amountMode?.value || 'debit';
+
+                  form.reset();
+                  dateInput.value = preservedDate;
+                  if (accountSelect) accountSelect.value = preservedAccount;
+                  if (amountMode) amountMode.value = preservedMode;
+                  if (categorySelect) categorySelect.value = '0';
+                  const recommendation = recommendationPanel();
+                  if (recommendation) recommendation.innerHTML = '';
+
+                  dateDirty = preservedDate !== localToday();
+                  dismissedNoticeKey = '';
+                  hideNotice();
+                  setStatus(`Added. Ready for another transaction on ${formatDate(preservedDate)}.`);
+                  labelInput?.focus();
+                });
+
+                document.addEventListener('visibilitychange', () => {
+                  if (!document.hidden) checkStaleDate();
+                });
+                window.addEventListener('focus', checkStaleDate);
+                checkStaleDate();
+              };
+
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initTransactionForm);
+              } else {
+                initTransactionForm();
+              }
+            })();
+            """
         ),
         cls="cc-crud-panel",
     )

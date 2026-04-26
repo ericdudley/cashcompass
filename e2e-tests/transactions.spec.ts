@@ -17,6 +17,28 @@ function formatDisplayDate(isoDate: string): string {
 	});
 }
 
+function mockBrowserTodayScript(isoDate: string): string {
+	return `
+		(() => {
+			const RealDate = Date;
+			const fixedTime = new RealDate('${isoDate}T09:00:00').getTime();
+			class MockDate extends RealDate {
+				constructor(...args) {
+					if (args.length === 0) {
+						super(fixedTime);
+					} else {
+						super(...args);
+					}
+				}
+				static now() {
+					return fixedTime;
+				}
+			}
+			window.Date = MockDate;
+		})();
+	`;
+}
+
 test('transactions page loads', async ({ page }) => {
 	const tp = new TransactionsPage(page);
 	await tp.goto();
@@ -113,6 +135,91 @@ test('can create a new transaction', async ({ page }) => {
 	// Wait for list to update
 	await expect(tp.getRows()).toHaveCount(initialCount + 1);
 	await expect(page.locator('text=Test Transaction E2E')).toBeVisible();
+});
+
+test('create form resets for repeated entry after adding a transaction', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	const initialCount = await tp.getRows().count();
+	const entryDate = currentMonthDate(17);
+
+	await tp.fillCreateForm({
+		date: entryDate,
+		label: 'Repeated Entry E2E',
+		amount: '19.50',
+		mode: 'credit',
+		categoryId: '2',
+	});
+	await tp.submitCreate();
+
+	await expect(tp.getRows()).toHaveCount(initialCount + 1);
+	await expect(tp.getCreateDateInput()).toHaveValue(entryDate);
+	await expect(tp.getCreateAmountModeSelect()).toHaveValue('credit');
+	await expect(tp.getCreateAccountSelect()).toHaveValue(/\d+/);
+	await expect(tp.getCreateLabelInput()).toHaveValue('');
+	await expect(tp.getCreateAmountInput()).toHaveValue('');
+	await expect(tp.getCreateCategorySelect()).toHaveValue('0');
+	await expect(tp.getRecommendationApply()).toHaveCount(0);
+	await page.waitForTimeout(700);
+	await expect(tp.getRecommendationApply()).toHaveCount(0);
+	await expect(tp.getCreateStatus()).toContainText('Added. Ready for another transaction');
+	await expect(tp.getCreateLabelInput()).toBeFocused();
+});
+
+test('stale empty create form advances to browser-local today', async ({ page }) => {
+	await page.addInitScript(mockBrowserTodayScript('2099-01-02'));
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await expect(tp.getCreateDateInput()).toHaveValue('2099-01-02');
+	await expect(tp.getDateNotice()).toBeHidden();
+});
+
+test('stale create form with a draft asks before changing the date', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.getCreateDateInput().fill('2099-01-01');
+	await tp.getCreateLabelInput().fill('Draft transaction');
+	await page.evaluate(mockBrowserTodayScript('2099-01-02'));
+	await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+
+	await expect(tp.getCreateDateInput()).toHaveValue('2099-01-01');
+	await expect(tp.getDateNotice()).toBeVisible();
+	await expect(tp.getDateNotice()).toContainText('This form is dated Jan 1. Today is Jan 2.');
+
+	await tp.getDateNoticeKeepDate().click();
+	await expect(tp.getCreateDateInput()).toHaveValue('2099-01-01');
+	await expect(tp.getDateNotice()).toBeHidden();
+});
+
+test('stale create form notice can switch the draft to today', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.getCreateDateInput().fill('2099-01-01');
+	await tp.getCreateAmountInput().fill('10.00');
+	await page.evaluate(mockBrowserTodayScript('2099-01-02'));
+	await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+
+	await expect(tp.getDateNotice()).toBeVisible();
+	await tp.getDateNoticeUseToday().click();
+
+	await expect(tp.getCreateDateInput()).toHaveValue('2099-01-02');
+	await expect(tp.getDateNotice()).toBeHidden();
+});
+
+test('today button updates the create form date', async ({ page }) => {
+	await page.addInitScript(mockBrowserTodayScript('2099-01-02'));
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.getCreateDateInput().fill('2099-01-01');
+	await tp.getDateTodayButton().click();
+
+	await expect(tp.getCreateDateInput()).toHaveValue('2099-01-02');
+	await expect(tp.getDateNotice()).toBeHidden();
 });
 
 test('can edit a transaction', async ({ page }) => {

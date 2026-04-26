@@ -1,6 +1,5 @@
 from fasthtml.common import *
 
-
 THEMES = [
     ("abyss", "Abyss"),
     ("night", "Night"),
@@ -31,7 +30,11 @@ def theme_select(select_id: str, extra_cls: str = "", width_cls: str = "w-36"):
 
 def nav_bar(active: str):
     def link(href, name, label):
-        cls = "text-primary font-semibold" if active == name else "text-base-content/70 hover:text-base-content"
+        cls = (
+            "text-primary font-semibold"
+            if active == name
+            else "text-base-content/70 hover:text-base-content"
+        )
         return A(label, href=href, cls=cls)
 
     def mobile_link(href, name, label):
@@ -40,7 +43,11 @@ def nav_bar(active: str):
 
     return Nav(
         Div(
-            A("Cash Compass", href="/", cls="text-sm font-semibold text-base-content tracking-wide"),
+            A(
+                "Cash Compass",
+                href="/",
+                cls="text-sm font-semibold text-base-content tracking-wide",
+            ),
             Div(
                 link("/dashboard", "dashboard", "Dashboard"),
                 link("/accounts", "accounts", "Accounts"),
@@ -92,7 +99,7 @@ def page_layout(active_nav: str, *content):
         nav_bar(active_nav),
         Main(
             *content,
-            cls="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 pt-24 pb-12",
+            cls="mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pt-24 pb-12",
         ),
     )
 
