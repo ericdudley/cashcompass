@@ -73,4 +73,8 @@ export class AccountsPage {
 	getArchivedSection(): Locator {
 		return this.page.locator('[data-testid="archived-accounts"]');
 	}
+
+	getReconcileLink(): Locator {
+		return this.page.locator('[data-testid="accounts-reconcile-link"]');
+	}
 }

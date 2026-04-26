@@ -57,6 +57,19 @@ class TransactionService:
         account_id, account_label = self._require_account(account_id, account_label)
         return self.repo.create(iso8601, date, amount, label, account_id, account_label, category_id, category_label)
 
+    def create_batch(self, records: list[tuple[str, str, int, str, Optional[int], str, Optional[int], str]]) -> int:
+        normalized = []
+        for iso8601, date, amount, label, account_id, account_label, category_id, category_label in records:
+            normalized.append((
+                *self._normalize_date(iso8601, date),
+                self._normalize_amount(amount),
+                self._normalize_label(label),
+                *self._require_account(account_id, account_label),
+                category_id,
+                category_label,
+            ))
+        return self.repo.create_many(normalized)
+
     def update_amount(self, id: int, amount: int):
         self.repo.update_amount(id, self._normalize_amount(amount))
 

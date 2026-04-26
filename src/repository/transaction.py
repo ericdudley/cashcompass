@@ -110,24 +110,31 @@ class TransactionRepository:
     def create(self, iso8601: str, date: str, amount: int, label: str,
                account_id: Optional[int], account_label: str,
                category_id: Optional[int], category_label: str) -> Transaction:
-        cur = self.db.execute(
-            """
-            INSERT INTO transactions (
-                uid,
-                iso8601,
-                yyyy_mm_dd,
-                amount,
-                label,
-                account_id,
-                account_label,
-                category_id,
-                category_label
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [generate_uid("txn"), iso8601, date, amount, label, account_id, account_label, category_id, category_label],
+        cur = self._insert(
+            iso8601,
+            date,
+            amount,
+            label,
+            account_id,
+            account_label,
+            category_id,
+            category_label,
         )
         self.db.commit()
         return self.get_by_id(cur.lastrowid)
+
+    def create_many(self, records: list[tuple[str, str, int, str, Optional[int], str, Optional[int], str]]) -> int:
+        if not records:
+            return 0
+        try:
+            self.db.conn.execute("BEGIN")
+            for record in records:
+                self._insert(*record)
+            self.db.commit()
+        except Exception:
+            self.db.conn.rollback()
+            raise
+        return len(records)
 
     def update_amount(self, id: int, amount: int):
         self.db.execute("UPDATE transactions SET amount = ?, updated_at = datetime('now') WHERE id = ?", [amount, id])
@@ -206,6 +213,21 @@ class TransactionRepository:
             ))
         return result
 
+    def balances_by_account(self, account_ids: list[int]) -> dict[int, int]:
+        if not account_ids:
+            return {}
+        placeholders = ",".join("?" * len(account_ids))
+        rows = self.db.execute(
+            f"""
+            SELECT account_id, COALESCE(SUM(amount), 0) AS balance
+            FROM transactions
+            WHERE account_id IN ({placeholders})
+            GROUP BY account_id
+            """,
+            account_ids,
+        ).fetchall()
+        return {r["account_id"]: r["balance"] for r in rows}
+
     def sync_account_label(self, account_id: int, label: str):
         self.db.execute(
             "UPDATE transactions SET account_label = ?, updated_at = datetime('now') WHERE account_id = ?",
@@ -226,3 +248,23 @@ class TransactionRepository:
             [category_id],
         )
         self.db.commit()
+
+    def _insert(self, iso8601: str, date: str, amount: int, label: str,
+                account_id: Optional[int], account_label: str,
+                category_id: Optional[int], category_label: str):
+        return self.db.execute(
+            """
+            INSERT INTO transactions (
+                uid,
+                iso8601,
+                yyyy_mm_dd,
+                amount,
+                label,
+                account_id,
+                account_label,
+                category_id,
+                category_label
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [generate_uid("txn"), iso8601, date, amount, label, account_id, account_label, category_id, category_label],
+        )

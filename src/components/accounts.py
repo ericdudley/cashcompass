@@ -188,7 +188,19 @@ def account_form():
 
 
 def accounts_page(active: list[Account], archived: list[Account]):
-    header = Header(H1("Accounts", cls="cc-page-title text-4xl font-semibold text-base-content"), cls="space-y-2")
+    header = Header(
+        Div(
+            H1("Accounts", cls="cc-page-title text-4xl font-semibold text-base-content"),
+            A(
+                "Reconcile net worth",
+                href="/accounts/reconcile",
+                data_testid="accounts-reconcile-link",
+                cls="btn btn-secondary btn-sm",
+            ),
+            cls="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        ),
+        cls="space-y-2",
+    )
     return crud_page_layout(
         header,
         account_form(),

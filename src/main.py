@@ -14,12 +14,14 @@ from src.services.account import AccountService
 from src.services.backup import BackupService
 from src.services.category import CategoryService
 from src.services.category_recommendation import build_category_recommendation_service
+from src.services.reconciliation import ReconciliationService
 from src.services.transaction import TransactionService
 
 import src.routes.accounts as accounts_routes
 import src.routes.categories as categories_routes
 import src.routes.transactions as transactions_routes
 import src.routes.dashboard as dashboard_routes
+import src.routes.reconciliation as reconciliation_routes
 import src.routes.settings as settings_routes
 import src.routes.dev as dev_routes
 
@@ -69,6 +71,7 @@ acct_svc = AccountService(acct_repo, txn_repo)
 cat_svc = CategoryService(cat_repo, txn_repo)
 txn_svc = TransactionService(txn_repo)
 backup_svc = BackupService(db, acct_repo, cat_repo, txn_repo)
+reconciliation_svc = ReconciliationService(acct_repo, txn_repo, txn_svc)
 category_recommendation_svc = build_category_recommendation_service()
 
 logger.info(
@@ -78,6 +81,7 @@ logger.info(
 
 # Register routes
 accounts_routes.register(rt, acct_svc)
+reconciliation_routes.register(rt, reconciliation_svc)
 categories_routes.register(rt, cat_svc)
 transactions_routes.register(rt, txn_svc, acct_svc, cat_svc, category_recommendation_svc)
 dashboard_routes.register(rt, acct_svc, cat_svc, txn_svc)

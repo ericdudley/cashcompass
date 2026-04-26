@@ -20,6 +20,14 @@ def cents_display(cents: int) -> str:
     return f"-{cents_abs(cents)}"
 
 
+def cents_diff(cents: int) -> str:
+    if cents > 0:
+        return f"+{cents_abs(cents)}"
+    if cents < 0:
+        return f"-{cents_abs(cents)}"
+    return cents_abs(cents)
+
+
 def cents_input(cents: int) -> str:
     abs_cents = abs(cents)
     dollars = abs_cents // 100
