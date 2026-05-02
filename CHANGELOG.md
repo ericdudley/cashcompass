@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/ericdudley/cashcompass/compare/v0.4.0...v0.5.0) (2026-04-26)
+
+
+### Features
+
+* Better transaction form reset behavior ([04aa9d3](https://github.com/ericdudley/cashcompass/commit/04aa9d39dd5e75d3d85039f1853a757b082ae4aa))
+* Reconciliation ([6820754](https://github.com/ericdudley/cashcompass/commit/6820754d6658a8081cf5830562a8ba8fee0a9206))
+
 ## [0.4.0](https://github.com/ericdudley/cashcompass/compare/v0.3.0...v0.4.0) (2026-04-20)
 
 
