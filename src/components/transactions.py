@@ -1,4 +1,5 @@
 from fasthtml.common import *
+from src.components.filter_controls import checklist_filter
 from src.components.layout import crud_page_layout
 from src.models import Transaction, Category, Account
 from src.services.category_recommendation import RecommendationResult
@@ -466,20 +467,6 @@ def transactions_list(groups: list, f, categories: list[Category]):
             cls=btn_cls,
         ))
 
-    # Category checkboxes
-    cat_pills = []
-    for cat in categories:
-        is_checked = cat.id in (f.category_ids or [])
-        pill_cls = "badge badge-primary badge-soft px-3 py-3" if is_checked else "badge badge-outline px-3 py-3"
-        cat_pills.append(
-            Label(
-                Input(type="checkbox", name="category_id", value=str(cat.id),
-                      checked=is_checked, cls="sr-only"),
-                Span(cat.label, cls=pill_cls),
-                cls="cursor-pointer",
-            )
-        )
-
     filter_form = Form(
         Input(type="hidden", name="account_type", value=mode),
         Div(*preset_btns, cls="flex flex-wrap gap-2 mb-3"),
@@ -487,15 +474,25 @@ def transactions_list(groups: list, f, categories: list[Category]):
             Input(type="text", name="label", id="label-search", value=f.label or "",
                   placeholder="Search label...",
                   cls="input input-bordered input-sm flex-1 min-w-40"),
-            Div(*cat_pills, cls="flex flex-wrap gap-1"),
-            cls="flex flex-wrap gap-3 items-center",
+            Div(
+                checklist_filter(
+                    "Categories",
+                    "category_id",
+                    categories,
+                    set(f.category_ids or []),
+                    "transaction-category-filter",
+                    empty_summary="All",
+                ),
+                cls="w-full sm:w-64",
+            ),
+            cls="flex flex-wrap gap-3 items-start",
         ),
         id="transaction-filters",
         hx_get="/partials/transactions",
         hx_trigger="change, keyup changed delay:300ms from:#label-search",
         hx_target="#transaction-list",
         hx_swap="outerHTML",
-        cls="cc-glass rounded-xl p-4 mb-4",
+        cls="cc-glass relative z-30 rounded-xl p-4 mb-4",
     )
 
     # Transaction groups

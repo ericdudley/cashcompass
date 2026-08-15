@@ -311,6 +311,7 @@ test('filter bar is visible', async ({ page }) => {
 	await tp.goto();
 	await expect(tp.getFilterForm()).toBeVisible();
 	await expect(tp.getLabelSearch()).toBeVisible();
+	await expect(tp.getCategoryFilter().locator('[data-cc-checklist-button]')).toBeVisible();
 });
 
 test('label filter narrows results', async ({ page }) => {
@@ -346,6 +347,18 @@ test('URL updates with filter params after preset change', async ({ page }) => {
 	await page.waitForTimeout(300);
 
 	expect(page.url()).toContain('date_preset=last_month');
+});
+
+test('category checklist filters transactions', async ({ page }) => {
+	const tp = new TransactionsPage(page);
+	await tp.goto();
+
+	await tp.checkCategoryFilter('Groceries');
+	await page.waitForTimeout(500);
+
+	expect(page.url()).toContain('category_id=1');
+	await expect(tp.getRows().first()).toBeVisible();
+	await expect(tp.getRows().first()).toContainText('Groceries');
 });
 
 function parseCents(text: string): number {

@@ -16,7 +16,9 @@ pw:
 pw-ui:
 	npx playwright test --config playwright.pyserver.config.ts --ui
 
-check: pw
+check:
+	.venv/bin/python -m unittest discover tests/python
+	$(MAKE) pw
 
 push: check
 	@if [ -z "$(PUSH_MESSAGE)" ]; then \

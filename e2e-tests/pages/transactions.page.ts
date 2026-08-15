@@ -138,6 +138,20 @@ export class TransactionsPage {
 		return this.page.locator('#label-search');
 	}
 
+	getCategoryFilter(): Locator {
+		return this.page.locator('[data-testid="transaction-category-filter"]');
+	}
+
+	async checkCategoryFilter(label: string) {
+		const filter = this.getCategoryFilter();
+		await filter.locator('[data-cc-checklist-button]').click();
+		const row = filter.locator('[data-cc-checklist-row]').filter({ hasText: label }).first();
+		const checkbox = row.locator('input[type="checkbox"]');
+		if (!(await checkbox.isChecked())) {
+			await row.click();
+		}
+	}
+
 	getPresetButton(preset: string): Locator {
 		return this.page.locator(`button[hx-vals*="${preset}"]`);
 	}

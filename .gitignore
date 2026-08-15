@@ -47,3 +47,4 @@ __pycache__/
 
 # Local tool/runtime artifacts
 .sesskey
+.claude/settings.local.json
