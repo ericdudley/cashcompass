@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/ericdudley/cashcompass/compare/v0.5.0...v0.6.0) (2026-08-15)
+
+
+### Features
+
+* Improved dashboard charts ([7098720](https://github.com/ericdudley/cashcompass/commit/7098720e2391d2d1e3595ec224fad6e8a43acfac))
+
 ## [0.5.0](https://github.com/ericdudley/cashcompass/compare/v0.4.0...v0.5.0) (2026-04-26)
 
 
