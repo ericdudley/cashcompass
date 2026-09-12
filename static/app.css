@@ -235,6 +235,73 @@ main {
     pointer-events: none;
 }
 
+.cc-flow-scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+}
+
+.cc-flow-chart {
+    min-width: 760px;
+    min-height: 500px;
+}
+
+.cc-flow-chart svg {
+    display: block;
+    max-width: none;
+}
+
+.cc-flow-chart [data-flow-node-id],
+.cc-flow-chart [data-flow-link] {
+    transition: opacity 150ms ease, stroke-opacity 150ms ease;
+}
+
+.cc-flow-chart .cc-flow-dimmed {
+    opacity: 0.18;
+}
+
+.cc-flow-chart [data-flow-node-id]:focus rect {
+    stroke: var(--color-base-content);
+    stroke-width: 2px;
+}
+
+.cc-flow-chart [data-flow-link]:focus {
+    stroke-opacity: 0.8;
+}
+
+.cc-flow-label {
+    fill: var(--color-base-content);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cc-flow-value {
+    fill: color-mix(in oklab, var(--color-base-content) 62%, transparent);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.cc-flow-group-label {
+    fill: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.cc-flow-tooltip {
+    position: fixed;
+    z-index: 130;
+    width: max-content;
+    max-width: min(18rem, calc(100vw - 1rem));
+    padding: 0.65rem 0.8rem;
+    border-radius: 0.75rem;
+    pointer-events: none;
+}
+
 @media (max-width: 1023px) {
     .cc-checklist.cc-open {
         z-index: auto;

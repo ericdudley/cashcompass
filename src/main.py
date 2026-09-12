@@ -8,16 +8,21 @@ from starlette.responses import RedirectResponse
 
 from src.db import Database, seed_if_empty
 from src.repository.account import AccountRepository
+from src.repository.annual_income import AnnualIncomeRepository
 from src.repository.category import CategoryRepository
 from src.repository.transaction import TransactionRepository
 from src.services.account import AccountService
+from src.services.annual_income import AnnualIncomeService
 from src.services.backup import BackupService
 from src.services.category import CategoryService
 from src.services.category_recommendation import build_category_recommendation_service
+from src.services.flow import FlowService
 from src.services.reconciliation import ReconciliationService
 from src.services.transaction import TransactionService
 
 import src.routes.accounts as accounts_routes
+import src.routes.income as income_routes
+import src.routes.flow as flow_routes
 import src.routes.categories as categories_routes
 import src.routes.transactions as transactions_routes
 import src.routes.dashboard as dashboard_routes
@@ -66,11 +71,14 @@ seed_if_empty(db)
 txn_repo = TransactionRepository(db)
 acct_repo = AccountRepository(db)
 cat_repo = CategoryRepository(db)
+income_repo = AnnualIncomeRepository(db)
 
 acct_svc = AccountService(acct_repo, txn_repo)
 cat_svc = CategoryService(cat_repo, txn_repo)
 txn_svc = TransactionService(txn_repo)
-backup_svc = BackupService(db, acct_repo, cat_repo, txn_repo)
+income_svc = AnnualIncomeService(income_repo)
+flow_svc = FlowService(income_svc, txn_svc)
+backup_svc = BackupService(db, acct_repo, cat_repo, txn_repo, income_repo)
 reconciliation_svc = ReconciliationService(acct_repo, txn_repo, txn_svc)
 category_recommendation_svc = build_category_recommendation_service()
 
@@ -81,11 +89,13 @@ logger.info(
 
 # Register routes
 accounts_routes.register(rt, acct_svc)
+income_routes.register(rt, income_svc)
+flow_routes.register(rt, flow_svc)
 reconciliation_routes.register(rt, reconciliation_svc)
 categories_routes.register(rt, cat_svc)
 transactions_routes.register(rt, txn_svc, acct_svc, cat_svc, category_recommendation_svc)
 dashboard_routes.register(rt, acct_svc, cat_svc, txn_svc)
-settings_routes.register(rt, acct_svc, cat_svc, txn_svc, backup_svc, DEV_MODE)
+settings_routes.register(rt, acct_svc, cat_svc, txn_svc, income_svc, backup_svc, DEV_MODE)
 dev_routes.register(rt, db, DEV_MODE)
 
 
