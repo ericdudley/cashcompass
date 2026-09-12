@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/ericdudley/cashcompass/compare/v0.6.0...v0.7.0) (2026-09-12)
+
+
+### Features
+
+* Income module ([#15](https://github.com/ericdudley/cashcompass/issues/15)) ([35461da](https://github.com/ericdudley/cashcompass/commit/35461da474ad9b8d03e889af270ab394725f6f84))
+
 ## [0.6.0](https://github.com/ericdudley/cashcompass/compare/v0.5.0...v0.6.0) (2026-08-15)
 
 
