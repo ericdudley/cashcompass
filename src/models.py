@@ -24,6 +24,23 @@ class Category:
 
 
 @dataclass
+class AnnualIncome:
+    id: int = 0
+    uid: str = ""
+    tax_year: int = 0
+    gross_income_cents: int = 0
+    federal_tax_cents: int = 0
+    state_tax_cents: int = 0
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+    @property
+    def after_tax_income_cents(self) -> int:
+        return self.gross_income_cents - self.federal_tax_cents - self.state_tax_cents
+
+
+@dataclass
 class Transaction:
     id: int = 0
     uid: str = ""

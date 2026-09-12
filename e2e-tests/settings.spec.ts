@@ -44,12 +44,13 @@ test('backup export returns canonical JSON', async ({ request }) => {
 
 	const payload = await response.json();
 	expect(payload.format).toBe('cashcompass.backup');
-	expect(payload.version).toBe(1);
+	expect(payload.version).toBe(2);
 	expect(payload.app).toEqual({ name: 'CashCompass' });
-	expect(payload.schema).toEqual({ entities: ['accounts', 'categories', 'transactions'] });
+	expect(payload.schema).toEqual({ entities: ['accounts', 'categories', 'transactions', 'annual_incomes'] });
 	expect(payload.accounts[0].id).toMatch(/^acct_/);
 	expect(payload.categories[0].id).toMatch(/^cat_/);
 	expect(payload.transactions[0].id).toMatch(/^txn_/);
+	expect(payload.annual_incomes).toEqual([]);
 });
 
 test('transactions export returns interoperability CSV', async ({ request }) => {
@@ -103,11 +104,23 @@ test('backup restore round-trip preserves archived and uncategorized data', asyn
 	});
 	expect(netWorthResponse.ok()).toBeTruthy();
 
+	const incomeResponse = await request.post('/income', {
+		form: {
+			tax_year: '2025',
+			gross_income: '125000.00',
+			federal_tax: '22000.00',
+			state_tax: '7000.00',
+			notes: 'Backup round-trip',
+		},
+	});
+	expect(incomeResponse.ok()).toBeTruthy();
+
 	const backupResponse = await request.get('/settings/export/backup');
 	const expectedBackup = await backupResponse.json();
 	expect(expectedBackup.accounts.some((acct: any) => acct.is_archived)).toBe(true);
 	expect(expectedBackup.transactions.some((txn: any) => txn.category_id === null)).toBe(true);
 	expect(expectedBackup.transactions.some((txn: any) => txn.amount_cents === 100000)).toBe(true);
+	expect(expectedBackup.annual_incomes.some((income: any) => income.tax_year === 2025)).toBe(true);
 	expect(expectedBackup.accounts.some((acct: any) => acct.label.startsWith('Imported Expenses'))).toBe(false);
 
 	const resetResponse = await request.post('/settings/reset-database');
@@ -139,7 +152,7 @@ test('backup restore round-trip preserves archived and uncategorized data', asyn
 test('backup import rejects unsupported version', async ({ request, page }) => {
 	const response = await request.get('/settings/export/backup');
 	const payload = await response.json();
-	payload.version = 2;
+	payload.version = 999;
 
 	const importResponse = await request.post('/settings/import/backup', {
 		multipart: {
@@ -182,6 +195,50 @@ test('backup import rejects unresolved references', async ({ request, page }) =>
 	await expect(sp.getErrorAlert()).toContainText('transaction account_id does not resolve');
 });
 
+test('backup import accepts legacy occurred_at timestamps and preserves their calendar dates', async ({ request }) => {
+	const response = await request.get('/settings/export/backup');
+	const payload = await response.json();
+	const firstId = payload.transactions[0].id;
+	const secondId = payload.transactions[1].id;
+
+	payload.transactions[0].occurred_at = '2026-04-01T10:00:00Z';
+	payload.transactions[1].occurred_at = '2026-04-01T00:30:00+01:00';
+
+	const importResponse = await request.post('/settings/import/backup', {
+		multipart: {
+			file: {
+				name: 'legacy-timestamp-backup.json',
+				mimeType: 'application/json',
+				buffer: Buffer.from(JSON.stringify(payload))
+			}
+		}
+	});
+
+	expect(importResponse.ok()).toBeTruthy();
+	const restored = await (await request.get('/settings/export/backup')).json();
+	expect(restored.transactions.find((txn: any) => txn.id === firstId).occurred_at).toBe('2026-04-01');
+	expect(restored.transactions.find((txn: any) => txn.id === secondId).occurred_at).toBe('2026-04-01');
+});
+
+test('backup import rejects malformed occurred_at timestamps', async ({ request }) => {
+	const response = await request.get('/settings/export/backup');
+	const payload = await response.json();
+	payload.transactions[0].occurred_at = '2026-04-01Tnot-a-timeZ';
+
+	const importResponse = await request.post('/settings/import/backup', {
+		multipart: {
+			file: {
+				name: 'invalid-timestamp-backup.json',
+				mimeType: 'application/json',
+				buffer: Buffer.from(JSON.stringify(payload))
+			}
+		}
+	});
+
+	expect(importResponse.ok()).toBeTruthy();
+	await expect(importResponse.text()).resolves.toContain("Error: invalid occurred_at: '2026-04-01Tnot-a-timeZ'");
+});
+
 test('legacy import and export endpoints are removed', async ({ request }) => {
 	const endpoints = [
 		['GET', '/settings/export/expenses'],
@@ -211,4 +268,28 @@ test('dev-only reset flow clears backup data', async ({ request, page }) => {
 	expect(payload.accounts).toEqual([]);
 	expect(payload.categories).toEqual([]);
 	expect(payload.transactions).toEqual([]);
+	expect(payload.annual_incomes).toEqual([]);
+});
+
+test('version 1 backups remain importable without annual income', async ({ request }) => {
+	const response = await request.get('/settings/export/backup');
+	const payload = await response.json();
+	payload.version = 1;
+	payload.schema = { entities: ['accounts', 'categories', 'transactions'] };
+	delete payload.annual_incomes;
+
+	const importResponse = await request.post('/settings/import/backup', {
+		multipart: {
+			file: {
+				name: 'version-1-backup.json',
+				mimeType: 'application/json',
+				buffer: Buffer.from(JSON.stringify(payload)),
+			},
+		},
+	});
+
+	expect(importResponse.ok()).toBeTruthy();
+	const restored = await (await request.get('/settings/export/backup')).json();
+	expect(restored.version).toBe(2);
+	expect(restored.annual_incomes).toEqual([]);
 });

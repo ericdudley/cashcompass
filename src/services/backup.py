@@ -7,11 +7,13 @@ from datetime import datetime, timezone
 
 from src.db import Database
 from src.repository.account import AccountRepository
+from src.repository.annual_income import AnnualIncomeRepository
 from src.repository.category import CategoryRepository
 from src.repository.transaction import TransactionRepository
 
 SUPPORTED_FORMAT = "cashcompass.backup"
-SUPPORTED_VERSION = 1
+SUPPORTED_VERSION = 2
+IMPORTABLE_VERSIONS = {1, 2}
 
 
 def _now_utc() -> str:
@@ -53,13 +55,28 @@ def _parse_timestamp(value: str, field_name: str) -> str:
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _require_date(value: str, field_name: str) -> str:
-    raw = (value or "").strip()
+def _parse_occurred_at(value, field_name: str) -> str:
+    """Return a transaction's calendar date from canonical or legacy input.
+
+    Backups represent when a transaction occurred as a date.  Older data may
+    contain an ISO-8601 timestamp in this field, so retain the date written in
+    that timestamp rather than converting it across time zones.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"invalid {field_name}: {value!r}")
+    raw = value.strip()
     try:
         datetime.strptime(raw, "%Y-%m-%d")
+        return raw
+    except ValueError:
+        pass
+
+    normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    try:
+        occurred_at = datetime.fromisoformat(normalized)
     except ValueError as exc:
         raise ValueError(f"invalid {field_name}: {value!r}") from exc
-    return raw
+    return occurred_at.date().isoformat()
 
 
 def _require_bool(value, field_name: str) -> bool:
@@ -87,23 +104,26 @@ class BackupService:
         acct_repo: AccountRepository,
         cat_repo: CategoryRepository,
         txn_repo: TransactionRepository,
+        income_repo: AnnualIncomeRepository,
     ):
         self.db = db
         self.acct_repo = acct_repo
         self.cat_repo = cat_repo
         self.txn_repo = txn_repo
+        self.income_repo = income_repo
 
     def export_backup(self) -> dict:
         accounts = sorted(self.acct_repo.list(), key=lambda a: a.id)
         categories = sorted(self.cat_repo.list(), key=lambda c: c.id)
         transactions = sorted(self.txn_repo.list_all(), key=lambda t: t.id)
+        annual_incomes = sorted(self.income_repo.list(), key=lambda income: income.tax_year)
 
         return {
             "format": SUPPORTED_FORMAT,
             "version": SUPPORTED_VERSION,
             "exported_at": _now_utc(),
             "app": {"name": "CashCompass"},
-            "schema": {"entities": ["accounts", "categories", "transactions"]},
+            "schema": {"entities": ["accounts", "categories", "transactions", "annual_incomes"]},
             "accounts": [
                 {
                     "id": acct.uid,
@@ -139,6 +159,20 @@ class BackupService:
                     "updated_at": _format_timestamp(txn.updated_at),
                 }
                 for txn in transactions
+            ],
+            "annual_incomes": [
+                {
+                    "id": income.uid,
+                    "legacy_numeric_id": income.id,
+                    "tax_year": income.tax_year,
+                    "gross_income_cents": income.gross_income_cents,
+                    "federal_tax_cents": income.federal_tax_cents,
+                    "state_tax_cents": income.state_tax_cents,
+                    "notes": income.notes,
+                    "created_at": _format_timestamp(income.created_at),
+                    "updated_at": _format_timestamp(income.updated_at),
+                }
+                for income in annual_incomes
             ],
         }
 
@@ -193,6 +227,7 @@ class BackupService:
         accounts = payload["accounts"]
         categories = payload["categories"]
         transactions = payload["transactions"]
+        annual_incomes = payload.get("annual_incomes", [])
 
         account_rows = []
         account_uid_to_id = {}
@@ -228,7 +263,7 @@ class BackupService:
         for txn in transactions:
             uid = _require_str(txn.get("id"), "transaction id")
             legacy_id = _require_int(txn.get("legacy_numeric_id"), "transaction legacy_numeric_id")
-            occurred_at = _require_date(txn.get("occurred_at"), "occurred_at")
+            occurred_at = _parse_occurred_at(txn.get("occurred_at"), "occurred_at")
             amount = _require_int(txn.get("amount_cents"), "amount_cents")
             if amount == 0:
                 raise ValueError("amount_cents must be non-zero")
@@ -263,12 +298,50 @@ class BackupService:
                 updated_at,
             ))
 
+        annual_income_rows = []
+        annual_income_years = set()
+        for income in annual_incomes:
+            uid = _require_str(income.get("id"), "annual income id")
+            legacy_id = _require_int(income.get("legacy_numeric_id"), "annual income legacy_numeric_id")
+            tax_year = _require_int(income.get("tax_year"), "annual income tax_year")
+            gross_income = _require_int(income.get("gross_income_cents"), "annual income gross_income_cents")
+            federal_tax = _require_int(income.get("federal_tax_cents"), "annual income federal_tax_cents")
+            state_tax = _require_int(income.get("state_tax_cents"), "annual income state_tax_cents")
+            notes = income.get("notes", "")
+            if not isinstance(notes, str):
+                raise ValueError("annual income notes must be a string")
+            if not 1900 <= tax_year <= 9999:
+                raise ValueError("annual income tax_year must be between 1900 and 9999")
+            if tax_year in annual_income_years:
+                raise ValueError(f"duplicate annual income tax_year: {tax_year}")
+            if gross_income <= 0:
+                raise ValueError("annual income gross_income_cents must be greater than zero")
+            if federal_tax < 0 or state_tax < 0:
+                raise ValueError("annual income tax amounts cannot be negative")
+            if federal_tax + state_tax > gross_income:
+                raise ValueError("annual income taxes cannot exceed gross income")
+            annual_income_years.add(tax_year)
+            created_at = _parse_timestamp(income.get("created_at", ""), "annual income created_at")
+            updated_at = _parse_timestamp(income.get("updated_at", ""), "annual income updated_at")
+            annual_income_rows.append((
+                legacy_id,
+                uid,
+                tax_year,
+                gross_income,
+                federal_tax,
+                state_tax,
+                notes.strip(),
+                created_at,
+                updated_at,
+            ))
+
         try:
             self.db.conn.execute("BEGIN")
+            self.db.execute("DELETE FROM annual_incomes")
             self.db.execute("DELETE FROM transactions")
             self.db.execute("DELETE FROM categories")
             self.db.execute("DELETE FROM accounts")
-            self.db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions','categories','accounts')")
+            self.db.execute("DELETE FROM sqlite_sequence WHERE name IN ('annual_incomes','transactions','categories','accounts')")
 
             self.db.conn.executemany(
                 """
@@ -303,6 +376,22 @@ class BackupService:
                 """,
                 transaction_rows,
             )
+            self.db.conn.executemany(
+                """
+                INSERT INTO annual_incomes (
+                    id,
+                    uid,
+                    tax_year,
+                    gross_income_cents,
+                    federal_tax_cents,
+                    state_tax_cents,
+                    notes,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                annual_income_rows,
+            )
             self.db.commit()
         except Exception:
             self.db.conn.rollback()
@@ -312,17 +401,22 @@ class BackupService:
             "accounts": len(account_rows),
             "categories": len(category_rows),
             "transactions": len(transaction_rows),
+            "annual_incomes": len(annual_income_rows),
         }
 
     def _validate_backup(self, payload: dict):
         if payload.get("format") != SUPPORTED_FORMAT:
             raise ValueError("unsupported backup format")
-        if payload.get("version") != SUPPORTED_VERSION:
+        version = payload.get("version")
+        if version not in IMPORTABLE_VERSIONS:
             raise ValueError("unsupported backup version")
 
         for field in ("accounts", "categories", "transactions"):
             if not isinstance(payload.get(field), list):
                 raise ValueError(f"{field} must be an array")
+
+        if version >= 2 and not isinstance(payload.get("annual_incomes"), list):
+            raise ValueError("annual_incomes must be an array")
 
         self._validate_unique_ids(payload["accounts"], "accounts")
         self._validate_unique_ids(payload["categories"], "categories")
@@ -330,6 +424,9 @@ class BackupService:
         self._validate_unique_legacy_ids(payload["accounts"], "accounts")
         self._validate_unique_legacy_ids(payload["categories"], "categories")
         self._validate_unique_legacy_ids(payload["transactions"], "transactions")
+        if version >= 2:
+            self._validate_unique_ids(payload["annual_incomes"], "annual_incomes")
+            self._validate_unique_legacy_ids(payload["annual_incomes"], "annual_incomes")
 
     @staticmethod
     def _validate_unique_ids(records: list[dict], field_name: str):

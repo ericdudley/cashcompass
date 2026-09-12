@@ -9,10 +9,11 @@ def register(rt, db: Database, dev_mode: bool):
 
     @rt("/dev/reset", methods=["POST"])
     def post():
+        db.execute("DELETE FROM annual_incomes")
         db.execute("DELETE FROM transactions")
         db.execute("DELETE FROM categories")
         db.execute("DELETE FROM accounts")
-        db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions','categories','accounts')")
+        db.execute("DELETE FROM sqlite_sequence WHERE name IN ('annual_incomes','transactions','categories','accounts')")
         db.commit()
         seed_if_empty(db)
         return "ok"

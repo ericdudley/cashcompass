@@ -6,16 +6,20 @@ test('nav bar is visible on home page', async ({ page }) => {
 	await expect(page.locator('nav a[href="/"]')).toContainText('Cash Compass');
 });
 
-test('nav links to accounts and categories from home', async ({ page }) => {
+test('nav links to flow, annual income, accounts, and categories from home', async ({ page }) => {
 	await page.goto('/');
 	const hamburger = page.locator('[onclick*="mobile-nav"]');
 	if (await hamburger.isVisible()) {
 		await hamburger.click();
 		await expect(page.locator('#mobile-nav a[href="/accounts"]')).toBeVisible();
 		await expect(page.locator('#mobile-nav a[href="/categories"]')).toBeVisible();
+		await expect(page.locator('#mobile-nav a[href="/flow"]')).toBeVisible();
+		await expect(page.locator('#mobile-nav a[href="/income"]')).toBeVisible();
 	} else {
 		await expect(page.locator('nav a[href="/accounts"]').first()).toBeVisible();
 		await expect(page.locator('nav a[href="/categories"]').first()).toBeVisible();
+		await expect(page.locator('nav a[href="/flow"]').first()).toBeVisible();
+		await expect(page.locator('nav a[href="/income"]').first()).toBeVisible();
 	}
 });
 

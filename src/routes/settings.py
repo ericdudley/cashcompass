@@ -6,6 +6,7 @@ from fasthtml.common import *
 from starlette.responses import RedirectResponse, Response as StarletteResponse
 
 from src.services.account import AccountService
+from src.services.annual_income import AnnualIncomeService
 from src.services.backup import BackupService
 from src.services.category import CategoryService
 from src.services.transaction import TransactionService
@@ -14,7 +15,8 @@ from src.components.settings import settings_page
 from src.components.layout import page_layout
 
 def register(rt, acct_svc: AccountService, cat_svc: CategoryService,
-             txn_svc: TransactionService, backup_svc: BackupService, dev_mode: bool):
+             txn_svc: TransactionService, income_svc: AnnualIncomeService,
+             backup_svc: BackupService, dev_mode: bool):
 
     @rt("/settings", methods=["GET"])
     def get(req: Request):
@@ -73,6 +75,10 @@ def register(rt, acct_svc: AccountService, cat_svc: CategoryService,
     def post_reset():
         if not dev_mode:
             return StarletteResponse("not available", status_code=403)
+
+        incomes = income_svc.list()
+        for income in incomes:
+            income_svc.delete(income.id)
 
         txns = txn_svc.list(TransactionFilter())
         for t in txns:
