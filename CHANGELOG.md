@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/ericdudley/cashcompass/compare/v0.7.0...v0.8.0) (2026-11-01)
+
+
+### Features
+
+* Budget module ([#17](https://github.com/ericdudley/cashcompass/issues/17)) ([3de4091](https://github.com/ericdudley/cashcompass/commit/3de4091c42d8434254555b220bfcf543b102656b))
+
 ## [0.7.0](https://github.com/ericdudley/cashcompass/compare/v0.6.0...v0.7.0) (2026-09-12)
 
 
