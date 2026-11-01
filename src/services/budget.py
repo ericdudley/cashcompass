@@ -75,12 +75,19 @@ class BudgetService:
     def save_limits(self, month: str, raw_limits: dict[int, str]):
         month_bounds(month)
         valid_ids = {category.id for category in self.cat_svc.list()} | {0}
+        effective = {}
+        for change in self.repo.list():
+            if change.month <= month:
+                effective[change.category_id] = change.amount_cents
         normalized = {}
         for category_id, raw in raw_limits.items():
             if category_id not in valid_ids:
                 raise ValueError("budget category is invalid")
-            normalized[category_id or None] = parse_budget_limit(raw)
-        self.repo.save_limits(month, normalized)
+            amount = parse_budget_limit(raw)
+            if amount != effective.get(category_id or None):
+                normalized[category_id or None] = amount
+        if normalized:
+            self.repo.save_limits(month, normalized)
 
     def clear_limits(self):
         self.repo.clear()
@@ -93,9 +100,10 @@ class BudgetService:
         current = category_breakdown(self.txn_svc.list(TransactionFilter(
             date_from=first, date_to=last, account_type="expenses",
         )), self.cat_svc.list())
-        limits = {limit.category_id: limit.amount_cents for limit in self.repo.list(month)}
         if not any(row.category_id is None for row in current.rows):
             current.rows.append(CategoryTotal(label="Uncategorized"))
+        budgets = self._build_budgets(month, [row.category_id for row in current.rows])
+        limits = {key: budget["contribution"] for key, budget in budgets.items() if budget["contribution"] is not None}
         prior = CategoryBreakdown()
         if previous:
             prev_first, prev_last = month_bounds(previous)
@@ -111,9 +119,74 @@ class BudgetService:
             "previous_breakdown": prior,
             "transactions_url": transactions_url(month),
             "limits": limits,
+            "budgets": budgets,
             "total_limits": sum(limits.values()),
+            "total_available": sum(budgets[key]["available"] for key in limits),
+            "total_remaining": sum(budgets[key]["remaining"] for key in limits),
             "budgeted_expenses": sum(row.net_expenses for row in current.rows if row.category_id in limits),
+            "annual_limit": sum(budget["annual_limit"] for budget in budgets.values() if budget["annual_limit"] is not None),
+            "annual_expenses": sum(budget["annual_expenses"] for budget in budgets.values() if budget["annual_limit"] is not None),
+            "annual_period": f"January–{datetime.strptime(month, '%Y-%m').strftime('%B %Y')}",
         }
+
+    def _build_budgets(self, month: str, category_ids: list[int | None]) -> dict:
+        """Resolve contributions and replay this calendar year without storing balances."""
+        year = month[:4]
+        year_start, _ = month_bounds(f"{year}-01")
+        _, through = month_bounds(month)
+        expenses = {}
+        annual_expenses = {}
+        for txn in self.txn_svc.list(TransactionFilter(date_from=year_start, date_to=through, account_type="expenses")):
+            key = (txn.date[:7].replace("_", "-"), txn.category_id)
+            expenses[key] = expenses.get(key, 0) - txn.amount
+            annual_expenses[txn.category_id] = annual_expenses.get(txn.category_id, 0) - txn.amount
+        histories = {category_id: [] for category_id in category_ids}
+        for change in self.repo.list():
+            if change.category_id in histories:
+                histories[change.category_id].append(change)
+
+        result = {}
+        for category_id, history in histories.items():
+            contribution = None
+            changes = {}
+            next_change = None
+            for change in history:
+                if change.month < f"{year}-01":
+                    contribution = change.amount_cents
+                else:
+                    changes[change.month] = change.amount_cents
+                if change.month > month and next_change is None:
+                    next_change = change
+
+            balance = 0
+            annual_limit = None
+            selected = {}
+            for number in range(1, 13):
+                period = f"{year}-{number:02d}"
+                if period in changes:
+                    contribution = changes[period]
+                if contribution is None:
+                    balance = 0
+                    available = remaining = None
+                    rollover = 0
+                else:
+                    annual_limit = (annual_limit or 0) + contribution
+                    rollover = balance
+                    available = contribution + rollover
+                    remaining = available - expenses.get((period, category_id), 0)
+                    balance = remaining
+                if period == month:
+                    selected = {
+                        "contribution": contribution, "rollover": rollover,
+                        "available": available, "remaining": remaining,
+                    }
+            result[category_id] = {
+                **selected,
+                "annual_limit": annual_limit,
+                "annual_expenses": annual_expenses.get(category_id, 0),
+                "next_change": next_change,
+            }
+        return result
 
 
 def parse_budget_limit(raw: str) -> int | None:

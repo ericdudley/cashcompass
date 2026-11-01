@@ -27,8 +27,12 @@ export class BudgetPage {
 		return this.page.locator(`[data-testid="budget-limit-card"][data-category-id="${id}"]`);
 	}
 
+	getBudgetMetric(id: string, kind: 'rollover' | 'available' | 'annual-spending' | 'annual-status' | 'next-change'): Locator {
+		return this.getLimitCard(id).getByTestId(`budget-${kind}`);
+	}
+
 	async saveLimits() {
-		await this.page.getByRole('button', { name: 'Save limits', exact: true }).click();
+		await this.page.getByRole('button', { name: 'Save contributions', exact: true }).click();
 		await this.page.getByTestId('budget-saved').waitFor();
 	}
 
