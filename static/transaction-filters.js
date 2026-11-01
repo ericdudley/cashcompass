@@ -1,4 +1,27 @@
 (() => {
+  const breakdownKey = 'cashcompass-transaction-categories-open';
+  const initializedBreakdowns = new WeakSet();
+  const restoreBreakdown = () => {
+    const panel = document.getElementById('transaction-category-breakdown');
+    // Restore each new panel once; unrelated swaps must not undo a user's toggle.
+    if (panel && !initializedBreakdowns.has(panel)) {
+      initializedBreakdowns.add(panel);
+      panel.open = sessionStorage.getItem(breakdownKey) === 'true';
+    }
+  };
+  document.addEventListener('toggle', event => {
+    if (event.target.id === 'transaction-category-breakdown') {
+      sessionStorage.setItem(breakdownKey, String(event.target.open));
+    }
+  }, true);
+  document.addEventListener('DOMContentLoaded', restoreBreakdown);
+  document.addEventListener('htmx:beforeSwap', () => {
+    const panel = document.getElementById('transaction-category-breakdown');
+    if (panel) sessionStorage.setItem(breakdownKey, String(panel.open));
+  });
+  document.addEventListener('htmx:afterSwap', restoreBreakdown);
+  document.addEventListener('htmx:historyRestore', restoreBreakdown);
+
   const form = () => document.getElementById('transaction-filters');
   const updateControls = () => {
     const filters = form();

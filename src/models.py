@@ -111,4 +111,5 @@ class CategoryBreakdown:
 class MonthlyBudget:
     month: str = ""
     category_id: Optional[int] = None
-    amount_cents: int = 0
+    # Effective from this month until the next change; None stops tracking.
+    amount_cents: Optional[int] = None

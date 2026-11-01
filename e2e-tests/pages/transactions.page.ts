@@ -19,6 +19,10 @@ export class TransactionsPage {
 		return this.page.getByTestId('transaction-category-breakdown');
 	}
 
+	getBreakdownToggle(): Locator {
+		return this.getBreakdown().getByTestId('category-breakdown-toggle');
+	}
+
 	getBreakdownRows(): Locator {
 		return this.getBreakdown().getByTestId('category-breakdown-row');
 	}

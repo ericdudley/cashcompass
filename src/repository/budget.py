@@ -17,9 +17,8 @@ class BudgetRepository:
             self.db.conn.execute("BEGIN")
             for category_id, amount in limits.items():
                 self.db.execute("DELETE FROM monthly_budgets WHERE month = ? AND category_id IS ?", [month, category_id])
-                if amount is not None:
-                    self.db.execute("INSERT INTO monthly_budgets (month, category_id, amount_cents) VALUES (?, ?, ?)",
-                                    [month, category_id, amount])
+                self.db.execute("INSERT INTO monthly_budgets (month, category_id, amount_cents) VALUES (?, ?, ?)",
+                                [month, category_id, amount])
             self.db.commit()
         except Exception:
             self.db.conn.rollback()

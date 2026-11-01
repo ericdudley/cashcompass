@@ -14,8 +14,8 @@ from src.repository.transaction import TransactionRepository
 from src.services.budget import month_bounds
 
 SUPPORTED_FORMAT = "cashcompass.backup"
-SUPPORTED_VERSION = 3
-IMPORTABLE_VERSIONS = {1, 2, 3}
+SUPPORTED_VERSION = 4
+IMPORTABLE_VERSIONS = {1, 2, 3, 4}
 
 
 def _now_utc() -> str:
@@ -233,6 +233,7 @@ class BackupService:
         return payload
 
     def restore_backup(self, payload: dict) -> dict:
+        self._validate_backup(payload)
         accounts = payload["accounts"]
         categories = payload["categories"]
         transactions = payload["transactions"]
@@ -352,9 +353,13 @@ class BackupService:
                 raise ValueError("monthly budget must be an object")
             month = _require_str(budget.get("month"), "budget month")
             month_bounds(month)
-            amount = _require_int(budget.get("amount_cents"), "budget amount_cents")
-            if not 0 <= amount <= 2**63 - 1:
-                raise ValueError("budget amount_cents must be a non-negative SQLite integer")
+            if "amount_cents" not in budget:
+                raise ValueError("budget amount_cents is required")
+            amount = budget["amount_cents"]
+            if amount is not None or payload["version"] < 4:
+                amount = _require_int(amount, "budget amount_cents")
+                if not 0 <= amount <= 2**63 - 1:
+                    raise ValueError("budget amount_cents must be a non-negative SQLite integer")
             category_uid = budget.get("category_id")
             if category_uid is not None:
                 category_uid = _require_str(category_uid, "budget category_id")

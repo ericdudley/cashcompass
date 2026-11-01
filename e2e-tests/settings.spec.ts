@@ -44,7 +44,7 @@ test('backup export returns canonical JSON', async ({ request }) => {
 
 	const payload = await response.json();
 	expect(payload.format).toBe('cashcompass.backup');
-	expect(payload.version).toBe(3);
+	expect(payload.version).toBe(4);
 	expect(payload.app).toEqual({ name: 'CashCompass' });
 	expect(payload.schema).toEqual({ entities: ['accounts', 'categories', 'transactions', 'annual_incomes', 'monthly_budgets'] });
 	expect(payload.accounts[0].id).toMatch(/^acct_/);
@@ -293,6 +293,6 @@ test('version 1 backups remain importable without annual income', async ({ reque
 
 	expect(importResponse.ok()).toBeTruthy();
 	const restored = await (await request.get('/settings/export/backup')).json();
-	expect(restored.version).toBe(3);
+	expect(restored.version).toBe(4);
 	expect(restored.annual_incomes).toEqual([]);
 });

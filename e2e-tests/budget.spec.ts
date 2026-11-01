@@ -109,7 +109,7 @@ test('budget rejects invalid month values', async ({ request }) => {
 	}
 });
 
-test('category limits persist per month with over-budget and zero-limit states', async ({ page, request }) => {
+test('category contributions inherit with over-budget and zero-contribution states', async ({ page, request }) => {
 	await addTransaction(request, { label: 'Budgeted food', amount: '100.00' });
 	await addTransaction(request, { label: 'Food credit', amount: '20.00', mode: 'credit' });
 	await addTransaction(request, { label: 'Unbudgeted utility', amount: '50.00', category: '2' });
@@ -122,13 +122,14 @@ test('category limits persist per month with over-budget and zero-limit states',
 	await expect(budget.getLimitCard('1').getByTestId('budget-limit-status')).toHaveText('Over by $5.00');
 	await expect(budget.getLimitCard('2').getByTestId('budget-limit-status')).toHaveText('Over by $50.00');
 	await expect(budget.getLimitCard('0').getByTestId('budget-limit-status')).toHaveText('$25.00 remaining');
-	await expect(page.getByTestId('budget-total-limits')).toHaveText('Total limits: $100.00');
+	await expect(page.getByTestId('budget-total-limits')).toHaveText('Monthly contributions: $100.00');
 	await page.reload();
 	await expect(budget.getLimitInput('1')).toHaveValue('75.00');
 	await expect(budget.getLimitInput('2')).toHaveValue('0.00');
 
 	await budget.selectMonth('2024-03');
-	await expect(budget.getLimitInput('1')).toHaveValue('');
+	await expect(budget.getLimitInput('1')).toHaveValue('75.00');
+	await expect(budget.getLimitCard('1').getByTestId('budget-rollover')).toHaveText('-$5.00');
 	await budget.getLimitInput('1').fill('150.00');
 	await budget.saveLimits();
 	await budget.goto('2024-02');
@@ -151,6 +152,87 @@ test('limit validation rejects invalid amounts without changing saved limits', a
 	expect(payload.monthly_budgets[0].amount_cents).toBe(1000);
 });
 
+test('recurring travel budget accumulates rollover and derives annual progress', async ({ page, request }) => {
+	await request.post('/budget/limits', { form: { month: '2024-01', limit_1: '200' } });
+	await request.post('/budget/limits', { form: { month: '2024-07', limit_1: '300' } });
+	await addTransaction(request, { label: 'Trip', amount: '500', date: '2024-03-15' });
+	const budget = new BudgetPage(page);
+	await budget.goto('2024-03');
+	await expect(budget.getLimitInput('1')).toHaveValue('200.00');
+	await expect(budget.getBudgetMetric('1', 'rollover')).toHaveText('$400.00');
+	await expect(budget.getBudgetMetric('1', 'available')).toHaveText('$600.00');
+	await expect(budget.getLimitCard('1').getByTestId('budget-limit-status')).toHaveText('$100.00 remaining');
+	await expect(budget.getBudgetMetric('1', 'annual-spending')).toHaveText('$500.00 of $3,000.00');
+	await expect(budget.getBudgetMetric('1', 'next-change')).toContainText('July 2024 · $300.00/month');
+	await expect(page.getByTestId('budget-annual-summary')).toContainText('January–March 2024');
+	await budget.selectMonth('2024-04');
+	await expect(budget.getBudgetMetric('1', 'rollover')).toHaveText('$100.00');
+	await expect(budget.getBudgetMetric('1', 'available')).toHaveText('$300.00');
+	await budget.selectMonth('2025-01');
+	await expect(budget.getLimitInput('1')).toHaveValue('300.00');
+	await expect(budget.getBudgetMetric('1', 'rollover')).toHaveText('$0.00');
+	await expect(budget.getBudgetMetric('1', 'available')).toHaveText('$300.00');
+	await expect(budget.getBudgetMetric('1', 'annual-spending')).toHaveText('$0.00 of $3,600.00');
+});
+
+test('editing one inherited contribution submits only changes and preserves scheduled changes', async ({ page, request }) => {
+	await request.post('/budget/limits', { form: { month: '2024-01', limit_1: '200', limit_2: '50' } });
+	await request.post('/budget/limits', { form: { month: '2024-07', limit_1: '300' } });
+	const budget = new BudgetPage(page);
+	await budget.goto('2024-03');
+	await budget.getLimitInput('2').fill('75');
+	const submission = page.waitForRequest(req => req.method() === 'POST' && req.url().endsWith('/budget/limits'));
+	await budget.saveLimits();
+	const submitted = await submission;
+	const fields = await new Response(submitted.postData(), {
+		headers: { 'Content-Type': submitted.headers()['content-type'] },
+	}).formData();
+	expect([...fields.keys()]).toEqual(['month', 'limit_2']);
+	let payload = await (await request.get('/settings/export/backup')).json();
+	expect(payload.monthly_budgets.filter((row: {month: string}) => row.month === '2024-03')).toHaveLength(1);
+	await budget.saveLimits();
+	payload = await (await request.get('/settings/export/backup')).json();
+	expect(payload.monthly_budgets).toHaveLength(4);
+	await budget.getLimitInput('1').fill('250');
+	await budget.saveLimits();
+	await budget.selectMonth('2024-06');
+	await expect(budget.getLimitInput('1')).toHaveValue('250.00');
+	await budget.selectMonth('2024-07');
+	await expect(budget.getLimitInput('1')).toHaveValue('300.00');
+});
+
+test('deficits carry, zero preserves rollover, and stop records survive backup restore', async ({ page, request }) => {
+	await request.post('/budget/limits', { form: { month: '2024-01', limit_1: '100', limit_0: '10' } });
+	await addTransaction(request, { label: 'Overspend', amount: '250', date: '2024-01-15' });
+	const budget = new BudgetPage(page);
+	await budget.goto('2024-02');
+	await expect(budget.getBudgetMetric('1', 'rollover')).toHaveText('-$150.00');
+	await expect(budget.getBudgetMetric('1', 'available')).toHaveText('-$50.00');
+	await expect(budget.getLimitCard('1').getByTestId('budget-limit-status')).toHaveText('Over by $50.00');
+	await budget.getLimitInput('0').fill('0');
+	await budget.saveLimits();
+	await expect(budget.getBudgetMetric('0', 'available')).toHaveText('$10.00');
+	await budget.getLimitInput('1').fill('');
+	await budget.getLimitInput('0').fill('');
+	await budget.saveLimits();
+	await expect(budget.getLimitCard('1').getByTestId('budget-limit-status')).toHaveText('No limit set');
+	const payload = await (await request.get('/settings/export/backup')).json();
+	expect(payload.version).toBe(4);
+	expect(payload.monthly_budgets.filter((row: {amount_cents: number | null}) => row.amount_cents === null)).toHaveLength(2);
+	await request.post('/dev/reset');
+	const restored = await request.post('/settings/import/backup', { multipart: {
+		file: { name: 'recurring-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(payload)) },
+	} });
+	expect(restored.ok()).toBeTruthy();
+	await budget.goto('2024-03');
+	await expect(budget.getLimitInput('1')).toHaveValue('');
+	await budget.getLimitInput('1').fill('100');
+	await budget.saveLimits();
+	await expect(budget.getBudgetMetric('1', 'rollover')).toHaveText('$0.00');
+	await expect(budget.getBudgetMetric('1', 'available')).toHaveText('$100.00');
+	await expect(budget.getBudgetMetric('1', 'annual-spending')).toHaveText('$250.00 of $1,100.00');
+});
+
 test('backup restore preserves monthly limits including uncategorized limits', async ({ page, request }) => {
 	await request.post('/budget/limits', { form: { month: '2024-02', limit_1: '42.29', limit_0: '0' } });
 	const payload = await (await request.get('/settings/export/backup')).json();
@@ -171,6 +253,13 @@ test('transaction breakdown follows multiple categories, search, creation, and d
 	await addTransaction(request, { label: 'Breakdown transport', amount: '99.00', category: '3' });
 	const transactions = new TransactionsPage(page);
 	await page.goto('/transactions?date_preset=custom&date_from=2024-02-01&date_to=2024-02-29&category_id=1&category_id=2');
+	await expect(transactions.getBreakdown()).toHaveJSProperty('open', false);
+	await expect(transactions.getBreakdownRows().first()).not.toBeVisible();
+	await expect(transactions.getBreakdownTotal('net')).toBeVisible();
+	await transactions.getBreakdownToggle().focus();
+	await transactions.getBreakdownToggle().press('Enter');
+	await expect(transactions.getBreakdown()).toHaveJSProperty('open', true);
+	await expect(transactions.getBreakdownRows().first()).toBeVisible();
 	await expect(transactions.getRows()).toHaveCount(2);
 	await expect(transactions.getBreakdownRows()).toHaveCount(2);
 	await expect(transactions.getBreakdownTotal('net')).toHaveText('$60.00');
@@ -179,6 +268,7 @@ test('transaction breakdown follows multiple categories, search, creation, and d
 	await transactions.getLabelSearch().fill('Breakdown grocery');
 	await expect(transactions.getRows()).toHaveCount(1);
 	await expect(transactions.getBreakdownTotal('net')).toHaveText('$10.00');
+	await expect(transactions.getBreakdown()).toHaveJSProperty('open', true);
 
 	await transactions.fillCreateForm({ date: '2024-02-20', label: 'Breakdown grocery extra', amount: '5.00', categoryId: '1' });
 	await transactions.submitCreate();
@@ -193,6 +283,12 @@ test('transaction breakdown follows multiple categories, search, creation, and d
 	await expect(transactions.getRows()).toHaveCount(3);
 	await expect(transactions.getBreakdownTotal('net')).toHaveText('$65.00');
 	await expect(page).toHaveURL(/date_preset=all_time/);
+	await transactions.getBreakdownToggle().click();
+	await expect(transactions.getBreakdown()).toHaveJSProperty('open', false);
+	await page.reload();
+	await expect(transactions.getBreakdown()).toHaveJSProperty('open', false);
+	await expect(transactions.getBreakdownTotal('net')).toBeVisible();
+	await expect(transactions.getRows()).toHaveCount(3);
 });
 
 test('net worth category breakdown shows inflows and outflows with signed net change', async ({ page, request }) => {
