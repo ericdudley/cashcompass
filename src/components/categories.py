@@ -1,10 +1,12 @@
 from fasthtml.common import *
+from src.components.feedback import form_error
 from src.components.layout import crud_page_layout
 from src.models import Category
 
 
 def category_card(cat: Category):
     return Div(
+        form_error(),
         Div(
             P(cat.label, cls="text-sm font-medium text-base-content"),
             Button(
@@ -28,6 +30,7 @@ def category_card(cat: Category):
             ),
             cls="flex items-center gap-2",
         ),
+        data_error_scope="true",
         id=f"category-{cat.id}",
         data_label=cat.label,
         data_testid="category-card",
@@ -37,6 +40,7 @@ def category_card(cat: Category):
 
 def category_card_edit(cat: Category):
     return Div(
+        form_error(),
         Input(
             type="text",
             id=f"label-{cat.id}",
@@ -64,6 +68,7 @@ def category_card_edit(cat: Category):
             ),
             cls="flex gap-2",
         ),
+        data_error_scope="true",
         id=f"category-{cat.id}",
         data_label=cat.label,
         data_testid="category-card",
@@ -89,6 +94,7 @@ def category_form():
     return Div(
         H2("Add Category", cls="text-sm font-semibold text-base-content/80"),
         Form(
+            form_error(),
             Div(
                 Label("Label", fr="cat-label", cls="label-text"),
                 Input(
@@ -109,10 +115,11 @@ def category_form():
                 ),
                 cls="cc-form-actions",
             ),
+            data_error_scope="true",
+            data_reset_on_success="true",
             hx_post="/categories",
             hx_target="#category-list",
             hx_swap="outerHTML",
-            hx_on="htmx:afterRequest: if(event.detail.successful) this.reset()",
             cls="cc-form-stack",
         ),
         cls="cc-crud-panel",

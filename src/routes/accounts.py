@@ -59,7 +59,10 @@ def register(rt, acct_svc: AccountService):
 
     @rt("/accounts/{id}", methods=["DELETE"])
     def delete(id: int):
-        acct_svc.delete(id)
+        try:
+            acct_svc.delete(id)
+        except ValueError as exc:
+            return Response(str(exc), status_code=409)
         return ""
 
     @rt("/partials/accounts", methods=["GET"])

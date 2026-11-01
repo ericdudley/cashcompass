@@ -1,4 +1,5 @@
 from fasthtml.common import *
+from src.components.feedback import form_error
 from src.components.layout import crud_page_layout
 from src.models import Account
 
@@ -35,6 +36,7 @@ def account_card(acct: Account):
         )
 
     return Div(
+        form_error(),
         Div(
             Div(
                 P(acct.label, cls="text-sm font-medium text-base-content"),
@@ -74,6 +76,7 @@ def account_card(acct: Account):
             ),
             cls="flex items-center gap-2 flex-wrap",
         ),
+        data_error_scope="true",
         id=f"account-{acct.id}",
         data_label=acct.label,
         data_testid="account-card",
@@ -83,6 +86,7 @@ def account_card(acct: Account):
 
 def account_card_edit(acct: Account):
     return Div(
+        form_error(),
         Input(
             type="text",
             id=f"label-{acct.id}",
@@ -110,6 +114,7 @@ def account_card_edit(acct: Account):
             ),
             cls="flex gap-2",
         ),
+        data_error_scope="true",
         id=f"account-{acct.id}",
         data_label=acct.label,
         data_testid="account-card",
@@ -146,6 +151,7 @@ def account_form():
     return Div(
         H2("Add Account", cls="text-sm font-semibold text-base-content/80"),
         Form(
+            form_error(),
             Div(
                 Label("Label", fr="account-label", cls="label-text"),
                 Input(
@@ -177,10 +183,11 @@ def account_form():
                 ),
                 cls="cc-form-actions",
             ),
+            data_error_scope="true",
+            data_reset_on_success="true",
             hx_post="/accounts",
             hx_target="#account-list",
             hx_swap="outerHTML",
-            hx_on="htmx:afterRequest: if(event.detail.successful) this.reset()",
             cls="cc-form-stack",
         ),
         cls="cc-crud-panel",

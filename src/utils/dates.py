@@ -1,9 +1,19 @@
 import math
-from datetime import date, datetime, timezone, timedelta
+import os
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+
+def local_today() -> date:
+    try:
+        tz = ZoneInfo(os.environ.get("CASHCOMPASS_TIMEZONE") or "America/Los_Angeles")
+    except ZoneInfoNotFoundError:
+        tz = ZoneInfo("America/Los_Angeles")
+    return datetime.now(tz).date()
 
 
 def preset_to_dates(preset: str) -> tuple[str, str]:
-    now = datetime.now(timezone.utc)
+    now = local_today()
     year, month = now.year, now.month
 
     if preset == "this_month":

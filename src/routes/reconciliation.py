@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-
 from fasthtml.common import *
 from fasthtml.common import to_xml
 from starlette.responses import RedirectResponse
@@ -11,18 +8,15 @@ from starlette.responses import Response as StarletteResponse
 from src.components.layout import page_layout
 from src.components.reconciliation import reconciliation_page
 from src.services.reconciliation import ReconciliationService
+from src.utils.dates import local_today
+from src.utils.format import parse_cents
 
 
 def _parse_balance_cents(raw_value: str) -> int:
     normalized = (raw_value or "").strip().replace("$", "").replace(",", "")
     if not normalized:
         raise ValueError("latest balance is required")
-    try:
-        amount = Decimal(normalized)
-    except InvalidOperation as exc:
-        raise ValueError("latest balance must be a valid number") from exc
-    cents = int((amount * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-    return cents
+    return parse_cents(normalized)
 
 
 def _render_page(
@@ -100,8 +94,13 @@ def register(rt, reconciliation_svc: ReconciliationService):
                 status_code=400,
             )
 
-        today_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        saved_count = reconciliation_svc.create_adjustments(latest_balance_cents, today_iso)
+        try:
+            saved_count = reconciliation_svc.create_adjustments(latest_balance_cents, local_today().isoformat())
+        except ValueError as exc:
+            return StarletteResponse(
+                to_xml(_render_page(reconciliation_svc, latest_values=latest_values, error_msg=str(exc))),
+                media_type="text/html", status_code=400,
+            )
 
         if saved_count == 0:
             return RedirectResponse("/accounts/reconcile?status=no_changes", status_code=303)

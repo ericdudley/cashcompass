@@ -73,7 +73,7 @@ class DashboardMetricsService:
         today = self.today_fn() if self.today_fn else _local_today()
         filters = parse_dashboard_filters(raw_params, accounts, categories, today=today)
 
-        if filters.expense_accounts_submitted and not filters.expense_account_ids:
+        if not filters.expense_account_ids:
             selected_expense_txns = []
             current_month_expense_txns = []
         else:
@@ -225,11 +225,11 @@ def build_dashboard_view_model(
         "categories": categories,
         "expense_accounts": [a for a in accounts if a.account_type == "expenses" and not a.is_archived],
         "net_worth_accounts": active_net_worth_accounts,
-        "this_month_expenses": cents_abs(this_month_expenses),
+        "this_month_expenses": cents_dollars(this_month_expenses),
         "this_month_expenses_projection": _year_projection(this_month_expenses),
-        "selected_expenses": cents_abs(selected_expenses),
+        "selected_expenses": cents_dollars(selected_expenses),
         "selected_expenses_projection": _year_projection(monthly_average),
-        "avg_monthly_expenses": cents_abs(monthly_average),
+        "avg_monthly_expenses": cents_dollars(monthly_average),
         "avg_monthly_expenses_projection": _year_projection(monthly_average),
         "current_net_worth": cents_dollars(current_net_worth),
         "expense_bars": expense_bars,
@@ -239,7 +239,7 @@ def build_dashboard_view_model(
         "expense_year_markers": _year_markers(
             expense_months,
             trailing_averages,
-            lambda average: f"{cents_abs(average * 12)}/yr",
+            lambda average: f"{cents_dollars(average * 12)}/yr",
             "annualized spending",
         ),
         "expense_months": [dash_month_label(month) for month in expense_months],
@@ -307,8 +307,8 @@ def _category_month_rows(txns: list[Transaction], months: list[str]) -> list[dic
         month_totals = [totals_by_key.get((category, month), 0) for month in months]
         rows.append({
             "category": category,
-            "totals": ["—" if amount == 0 else cents_abs(amount) for amount in month_totals],
-            "total": cents_abs(totals_by_category[category]),
+            "totals": ["—" if amount == 0 else cents_dollars(amount) for amount in month_totals],
+            "total": cents_dollars(totals_by_category[category]),
         })
     return rows
 
@@ -355,10 +355,10 @@ def _expense_chart_bars(
         ]
         bars.append({
             "month": dash_month_label(month),
-            "amt_fmt": cents_abs(month_totals[month]),
+            "amt_fmt": cents_dollars(month_totals[month]),
             "total_compact": _compact_currency(month_totals[month]),
             "total_position_style": f"bottom:{max(month_totals[month], 0) / max_expense * 100:.1f}%",
-            "trailing_avg_fmt": cents_abs(trailing_averages[idx]),
+            "trailing_avg_fmt": cents_dollars(trailing_averages[idx]),
             "segments": segments,
         })
     return bars, legend
@@ -371,7 +371,7 @@ def _monthly_average(month_totals: dict[str, int]) -> int:
 
 
 def _year_projection(monthly_amount: int) -> str:
-    return f"{cents_abs(monthly_amount * 12)}/year"
+    return f"{cents_dollars(monthly_amount * 12)}/year"
 
 
 def _compact_currency(cents: int) -> str:

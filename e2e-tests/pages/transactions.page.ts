@@ -15,6 +15,26 @@ export class TransactionsPage {
 		return this.page.locator('[data-testid="transaction-row"]');
 	}
 
+	getBreakdown(): Locator {
+		return this.page.getByTestId('transaction-category-breakdown');
+	}
+
+	getBreakdownRows(): Locator {
+		return this.getBreakdown().getByTestId('category-breakdown-row');
+	}
+
+	getBreakdownTotal(kind: 'spending' | 'credits' | 'net'): Locator {
+		return this.getBreakdown().getByTestId(`category-total-${kind}`);
+	}
+
+	getDateFrom(): Locator {
+		return this.getFilterForm().locator('input[name="date_from"]');
+	}
+
+	getDateTo(): Locator {
+		return this.getFilterForm().locator('input[name="date_to"]');
+	}
+
 	getEditRows(): Locator {
 		return this.page.locator('[data-testid="transaction-row-edit"]');
 	}
@@ -153,7 +173,19 @@ export class TransactionsPage {
 	}
 
 	getPresetButton(preset: string): Locator {
-		return this.page.locator(`button[hx-vals*="${preset}"]`);
+		return this.page.locator(`button[data-date-preset="${preset}"]`);
+	}
+
+	getCreateError(): Locator {
+		return this.getForm().locator('[data-form-error]');
+	}
+
+	getEditError(): Locator {
+		return this.getEditRows().locator('[data-form-error]');
+	}
+
+	getCategoryCheckbox(value: string): Locator {
+		return this.getCategoryFilter().locator(`input[name="category_id"][value="${value}"]`);
 	}
 
 	// Returns the subtotal element for a given date group (date formatted as "Jan 02, 2006")

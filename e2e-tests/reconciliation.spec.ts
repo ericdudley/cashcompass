@@ -3,7 +3,10 @@ import { AccountsPage } from './pages/accounts.page';
 import { ReconciliationPage } from './pages/reconciliation.page';
 
 function todayIsoDate(): string {
-	return new Date().toISOString().slice(0, 10);
+	return new Intl.DateTimeFormat('en-CA', {
+		timeZone: process.env.CASHCOMPASS_TIMEZONE || 'America/Los_Angeles',
+		year: 'numeric', month: '2-digit', day: '2-digit',
+	}).format(new Date());
 }
 
 async function exportBackup(request: any) {

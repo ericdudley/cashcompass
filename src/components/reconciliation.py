@@ -3,7 +3,7 @@ from __future__ import annotations
 from fasthtml.common import *
 
 from src.services.reconciliation import ReconciliationRow
-from src.utils.format import cents_diff, cents_dollars
+from src.utils.format import cents_diff, cents_dollars, parse_cents, validate_cents
 
 
 def _diff_tone_cls(cents: int | None) -> str:
@@ -21,11 +21,10 @@ def _server_diff(latest_value: str, current_balance: int) -> tuple[str, str]:
     if not raw:
         return "—", _diff_tone_cls(None)
     try:
-        normalized = raw.replace("$", "").replace(",", "")
-        latest_cents = int(round(float(normalized) * 100))
+        latest_cents = parse_cents(raw)
+        diff = validate_cents(latest_cents - current_balance)
     except (TypeError, ValueError):
         return "Invalid", "text-error"
-    diff = latest_cents - current_balance
     return cents_diff(diff), _diff_tone_cls(diff)
 
 

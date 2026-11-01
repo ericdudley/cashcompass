@@ -8,12 +8,14 @@ from starlette.responses import RedirectResponse
 
 from src.db import Database, seed_if_empty
 from src.repository.account import AccountRepository
+from src.repository.budget import BudgetRepository
 from src.repository.annual_income import AnnualIncomeRepository
 from src.repository.category import CategoryRepository
 from src.repository.transaction import TransactionRepository
 from src.services.account import AccountService
 from src.services.annual_income import AnnualIncomeService
 from src.services.backup import BackupService
+from src.services.budget import BudgetService
 from src.services.category import CategoryService
 from src.services.category_recommendation import build_category_recommendation_service
 from src.services.flow import FlowService
@@ -21,6 +23,7 @@ from src.services.reconciliation import ReconciliationService
 from src.services.transaction import TransactionService
 
 import src.routes.accounts as accounts_routes
+import src.routes.budget as budget_routes
 import src.routes.income as income_routes
 import src.routes.flow as flow_routes
 import src.routes.categories as categories_routes
@@ -42,6 +45,7 @@ DEV_MODE = os.environ.get("CASHCOMPASS_DEV", "").lower() == "true"
 
 app, rt = fast_app(
     pico=False,
+    htmx=False,
     hdrs=(
         Link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/daisyui@5", type="text/css"),
         Link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css", type="text/css"),
@@ -54,7 +58,10 @@ app, rt = fast_app(
             """
         ),
         Script(src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"),
-        Script(src="https://unpkg.com/htmx.org@1.9.12"),
+        Script(src="https://unpkg.com/htmx.org@2.0.7"),
+        Script(src="/static/forms.js", defer=True),
+        Script(src="/static/transaction-filters.js", defer=True),
+        Script(src="/static/transaction-form.js", defer=True),
         Link(rel="stylesheet", href="/static/app.css"),
     ),
 )
@@ -72,13 +79,15 @@ txn_repo = TransactionRepository(db)
 acct_repo = AccountRepository(db)
 cat_repo = CategoryRepository(db)
 income_repo = AnnualIncomeRepository(db)
+budget_repo = BudgetRepository(db)
 
 acct_svc = AccountService(acct_repo, txn_repo)
 cat_svc = CategoryService(cat_repo, txn_repo)
 txn_svc = TransactionService(txn_repo)
 income_svc = AnnualIncomeService(income_repo)
 flow_svc = FlowService(income_svc, txn_svc)
-backup_svc = BackupService(db, acct_repo, cat_repo, txn_repo, income_repo)
+budget_svc = BudgetService(txn_svc, cat_svc, budget_repo)
+backup_svc = BackupService(db, acct_repo, cat_repo, txn_repo, income_repo, budget_repo)
 reconciliation_svc = ReconciliationService(acct_repo, txn_repo, txn_svc)
 category_recommendation_svc = build_category_recommendation_service()
 
@@ -91,11 +100,12 @@ logger.info(
 accounts_routes.register(rt, acct_svc)
 income_routes.register(rt, income_svc)
 flow_routes.register(rt, flow_svc)
+budget_routes.register(rt, budget_svc)
 reconciliation_routes.register(rt, reconciliation_svc)
 categories_routes.register(rt, cat_svc)
 transactions_routes.register(rt, txn_svc, acct_svc, cat_svc, category_recommendation_svc)
 dashboard_routes.register(rt, acct_svc, cat_svc, txn_svc)
-settings_routes.register(rt, acct_svc, cat_svc, txn_svc, income_svc, backup_svc, DEV_MODE)
+settings_routes.register(rt, acct_svc, cat_svc, txn_svc, income_svc, backup_svc, budget_svc, DEV_MODE)
 dev_routes.register(rt, db, DEV_MODE)
 
 

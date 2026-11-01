@@ -1,7 +1,8 @@
 import sqlite3
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from src.utils.ids import generate_uid
+from src.utils.dates import local_today
 
 
 class Database:
@@ -70,7 +71,7 @@ def seed_if_empty(db: Database):
     util_id = db.execute("SELECT id FROM categories WHERE label = 'Utilities'").fetchone()[0]
     trans_id = db.execute("SELECT id FROM categories WHERE label = 'Transport'").fetchone()[0]
 
-    now = datetime.now(timezone.utc)
+    now = local_today()
     year, month = now.year, now.month
 
     def d(day):

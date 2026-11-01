@@ -80,3 +80,35 @@ class AccountMonthBalance:
     account_label: str = ""
     month: str = ""
     balance: int = 0
+
+
+@dataclass
+class CategoryTotal:
+    category_id: Optional[int] = None
+    label: str = ""
+    spending: int = 0
+    credits: int = 0
+    count: int = 0
+
+    @property
+    def net_expenses(self) -> int:
+        return self.spending - self.credits
+
+
+@dataclass
+class CategoryBreakdown:
+    rows: list[CategoryTotal] = field(default_factory=list)
+    spending: int = 0
+    credits: int = 0
+    count: int = 0
+
+    @property
+    def net_expenses(self) -> int:
+        return self.spending - self.credits
+
+
+@dataclass
+class MonthlyBudget:
+    month: str = ""
+    category_id: Optional[int] = None
+    amount_cents: int = 0

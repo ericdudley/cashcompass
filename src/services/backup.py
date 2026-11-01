@@ -8,12 +8,14 @@ from datetime import datetime, timezone
 from src.db import Database
 from src.repository.account import AccountRepository
 from src.repository.annual_income import AnnualIncomeRepository
+from src.repository.budget import BudgetRepository
 from src.repository.category import CategoryRepository
 from src.repository.transaction import TransactionRepository
+from src.services.budget import month_bounds
 
 SUPPORTED_FORMAT = "cashcompass.backup"
-SUPPORTED_VERSION = 2
-IMPORTABLE_VERSIONS = {1, 2}
+SUPPORTED_VERSION = 3
+IMPORTABLE_VERSIONS = {1, 2, 3}
 
 
 def _now_utc() -> str:
@@ -105,25 +107,32 @@ class BackupService:
         cat_repo: CategoryRepository,
         txn_repo: TransactionRepository,
         income_repo: AnnualIncomeRepository,
+        budget_repo: BudgetRepository,
     ):
         self.db = db
         self.acct_repo = acct_repo
         self.cat_repo = cat_repo
         self.txn_repo = txn_repo
         self.income_repo = income_repo
+        self.budget_repo = budget_repo
 
     def export_backup(self) -> dict:
         accounts = sorted(self.acct_repo.list(), key=lambda a: a.id)
         categories = sorted(self.cat_repo.list(), key=lambda c: c.id)
         transactions = sorted(self.txn_repo.list_all(), key=lambda t: t.id)
         annual_incomes = sorted(self.income_repo.list(), key=lambda income: income.tax_year)
+        category_uids = {category.id: category.uid for category in categories}
 
         return {
             "format": SUPPORTED_FORMAT,
             "version": SUPPORTED_VERSION,
             "exported_at": _now_utc(),
             "app": {"name": "CashCompass"},
-            "schema": {"entities": ["accounts", "categories", "transactions", "annual_incomes"]},
+            "schema": {"entities": ["accounts", "categories", "transactions", "annual_incomes", "monthly_budgets"]},
+            "monthly_budgets": [
+                {"month": budget.month, "category_id": category_uids.get(budget.category_id), "amount_cents": budget.amount_cents}
+                for budget in self.budget_repo.list()
+            ],
             "accounts": [
                 {
                     "id": acct.uid,
@@ -228,6 +237,7 @@ class BackupService:
         categories = payload["categories"]
         transactions = payload["transactions"]
         annual_incomes = payload.get("annual_incomes", [])
+        monthly_budgets = payload.get("monthly_budgets", []) if payload["version"] >= 3 else []
 
         account_rows = []
         account_uid_to_id = {}
@@ -335,8 +345,30 @@ class BackupService:
                 updated_at,
             ))
 
+        budget_rows = []
+        budget_keys = set()
+        for budget in monthly_budgets:
+            if not isinstance(budget, dict):
+                raise ValueError("monthly budget must be an object")
+            month = _require_str(budget.get("month"), "budget month")
+            month_bounds(month)
+            amount = _require_int(budget.get("amount_cents"), "budget amount_cents")
+            if not 0 <= amount <= 2**63 - 1:
+                raise ValueError("budget amount_cents must be a non-negative SQLite integer")
+            category_uid = budget.get("category_id")
+            if category_uid is not None:
+                category_uid = _require_str(category_uid, "budget category_id")
+                if category_uid not in category_uid_to_id:
+                    raise ValueError(f"budget category_id does not resolve: {category_uid}")
+            key = (month, category_uid)
+            if key in budget_keys:
+                raise ValueError("duplicate monthly budget category")
+            budget_keys.add(key)
+            budget_rows.append((month, category_uid_to_id.get(category_uid), amount))
+
         try:
             self.db.conn.execute("BEGIN")
+            self.db.execute("DELETE FROM monthly_budgets")
             self.db.execute("DELETE FROM annual_incomes")
             self.db.execute("DELETE FROM transactions")
             self.db.execute("DELETE FROM categories")
@@ -356,6 +388,9 @@ class BackupService:
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 category_rows,
+            )
+            self.db.conn.executemany(
+                "INSERT INTO monthly_budgets (month, category_id, amount_cents) VALUES (?, ?, ?)", budget_rows,
             )
             self.db.conn.executemany(
                 """
@@ -402,6 +437,7 @@ class BackupService:
             "categories": len(category_rows),
             "transactions": len(transaction_rows),
             "annual_incomes": len(annual_income_rows),
+            "monthly_budgets": len(budget_rows),
         }
 
     def _validate_backup(self, payload: dict):
@@ -417,6 +453,8 @@ class BackupService:
 
         if version >= 2 and not isinstance(payload.get("annual_incomes"), list):
             raise ValueError("annual_incomes must be an array")
+        if version >= 3 and not isinstance(payload.get("monthly_budgets"), list):
+            raise ValueError("monthly_budgets must be an array")
 
         self._validate_unique_ids(payload["accounts"], "accounts")
         self._validate_unique_ids(payload["categories"], "categories")

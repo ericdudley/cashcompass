@@ -24,6 +24,10 @@ CASHCOMPASS_DEV=true .venv/bin/python -m uvicorn src.main:app --port 8080 --relo
 
 The app runs at `http://localhost:8080`.
 
+The **Budget** page (`/budget`) shows monthly spending, refunds/credits, and net expenses by category across expense accounts, with a previous-month comparison and links to the matching transactions. Set category spending limits for each month to see remaining amounts and over-budget indicators. Limits use net expenses; a blank removes the limit, and zero means no spending planned. Limits are included in backup exports; older version 1 and 2 backups remain importable.
+
+The **Transactions** page shows a category breakdown for the active date, category, and search filters, including uncategorized activity. Net expenses subtract credits from spending; category shares use spending before credits.
+
 Local environment variables can be stored in `.env`; copy `.env.example` and set `ANTHROPIC_API_KEY` there when you want AI category recommendations enabled in the transaction form.
 
 ## Testing
@@ -51,6 +55,7 @@ npm run test:e2e
 | `CASHCOMPASS_MIGRATIONS_PATH` | `./src/migrations` | SQL migrations path |
 | `CASHCOMPASS_PORT` | `8080` | HTTP listen port |
 | `CASHCOMPASS_DEV` | unset | Enables dev-only routes such as `/dev/reset` when `true` |
+| `CASHCOMPASS_TIMEZONE` | `America/Los_Angeles` | Calendar timezone for monthly reports, transaction date presets, and demo data |
 | `ANTHROPIC_API_KEY` | unset | Enables Anthropic Haiku category recommendations on the transaction create form |
 
 ## Docker

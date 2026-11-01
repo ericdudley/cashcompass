@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fasthtml.common import *
 
+from src.components.feedback import form_error
 from src.components.layout import crud_page_layout
 from src.models import AnnualIncome
 from src.utils.format import cents_dollars, cents_input
@@ -11,6 +12,7 @@ from src.utils.format import cents_dollars, cents_input
 
 def annual_income_card(income: AnnualIncome):
     return Div(
+        form_error(),
         Div(
             Div(
                 H2(str(income.tax_year), cls="text-2xl font-semibold text-base-content"),
@@ -59,6 +61,7 @@ def annual_income_card(income: AnnualIncome):
             ),
             cls="flex",
         ),
+        data_error_scope="true",
         id=f"annual-income-{income.id}",
         data_testid="annual-income-card",
         data_year=str(income.tax_year),
@@ -68,6 +71,7 @@ def annual_income_card(income: AnnualIncome):
 
 def annual_income_card_edit(income: AnnualIncome):
     return Form(
+        form_error(),
         Div(
             H2(f"Edit {income.tax_year}", cls="text-lg font-semibold text-base-content"),
             P("Amounts should match the totals reported on that year's returns.", cls="text-xs cc-muted"),
@@ -109,11 +113,11 @@ def annual_income_card_edit(income: AnnualIncome):
             ),
             cls="flex gap-2",
         ),
+        data_error_scope="true",
         id=f"annual-income-{income.id}",
         hx_put=f"/income/{income.id}",
         hx_target="#annual-income-list",
         hx_swap="outerHTML",
-        hx_on="htmx:responseError: alert(event.detail.xhr.responseText)",
         data_testid="annual-income-edit-form",
         data_year=str(income.tax_year),
         cls="cc-glass rounded-2xl p-5 space-y-4",
@@ -149,6 +153,7 @@ def annual_income_form(current_year: int | None = None):
             cls="space-y-1",
         ),
         Form(
+            form_error(),
             Label(
                 Span("Tax year", cls="label-text"),
                 Input(
@@ -178,10 +183,11 @@ def annual_income_form(current_year: int | None = None):
             ),
             Button("Add annual income", type="submit", cls="btn btn-primary w-full sm:w-auto"),
             id="annual-income-form",
+            data_error_scope="true",
+            data_reset_on_success="true",
             hx_post="/income",
             hx_target="#annual-income-list",
             hx_swap="outerHTML",
-            hx_on="htmx:afterRequest: if(event.detail.successful) this.reset(); htmx:responseError: alert(event.detail.xhr.responseText)",
             cls="cc-form-stack",
         ),
         cls="cc-crud-panel",

@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from src.models import Transaction, TransactionFilter, MonthSum, AccountMonthBalance
 from src.repository.transaction import TransactionRepository
+from src.utils.format import validate_cents
 
 
 class TransactionService:
@@ -18,6 +19,7 @@ class TransactionService:
 
     @staticmethod
     def _normalize_amount(amount: int) -> int:
+        validate_cents(amount)
         if amount == 0:
             raise ValueError("transaction amount must be non-zero")
         return amount
@@ -69,6 +71,15 @@ class TransactionService:
                 category_label,
             ))
         return self.repo.create_many(normalized)
+
+    def update(self, id: int, iso8601: str, date: str, amount: int, label: str,
+               account_id: Optional[int], account_label: str,
+               category_id: Optional[int], category_label: str):
+        iso8601, date = self._normalize_date(iso8601, date)
+        label = self._normalize_label(label)
+        amount = self._normalize_amount(amount)
+        account_id, account_label = self._require_account(account_id, account_label)
+        self.repo.update(id, iso8601, date, amount, label, account_id, account_label, category_id, category_label)
 
     def update_amount(self, id: int, amount: int):
         self.repo.update_amount(id, self._normalize_amount(amount))

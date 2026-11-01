@@ -1,4 +1,14 @@
-import math
+from decimal import Decimal, DecimalException, ROUND_HALF_UP, localcontext
+
+
+SQLITE_MIN_INT = -(2**63)
+SQLITE_MAX_INT = 2**63 - 1
+
+
+def validate_cents(cents: int) -> int:
+    if isinstance(cents, bool) or not isinstance(cents, int) or not SQLITE_MIN_INT <= cents <= SQLITE_MAX_INT:
+        raise ValueError("amount is outside the supported range")
+    return cents
 
 
 def cents_abs(cents: int) -> str:
@@ -36,6 +46,13 @@ def cents_input(cents: int) -> str:
 
 
 def parse_cents(s: str) -> int:
-    s = s.replace("$", "").replace(",", "").strip()
-    f = float(s)
-    return int(math.floor(f * 100 + 0.5))
+    try:
+        amount = Decimal(s.replace("$", "").replace(",", "").strip())
+        if not amount.is_finite() or abs(amount) > Decimal(2**63) / 100:
+            raise ValueError("amount must be a finite number within the supported range")
+        with localcontext() as context:
+            context.prec = 40
+            cents = int((amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        return validate_cents(cents)
+    except (DecimalException, TypeError, AttributeError, OverflowError) as exc:
+        raise ValueError("amount must be a valid number within the supported range") from exc

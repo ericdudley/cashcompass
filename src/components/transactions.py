@@ -1,4 +1,8 @@
 from fasthtml.common import *
+from urllib.parse import urlencode
+from src.components.feedback import form_error
+from src.components.budget import category_breakdown_panel
+from src.services.budget import category_breakdown
 from src.components.filter_controls import checklist_filter
 from src.components.layout import crud_page_layout
 from src.models import Transaction, Category, Account
@@ -36,9 +40,8 @@ def transaction_row(txn: Transaction):
             Button(
                 "Delete",
                 hx_delete=f"/transactions/{txn.id}",
-                hx_target="#transaction-list",
+                hx_target="#transaction-results",
                 hx_swap="outerHTML",
-                hx_include="#transaction-filters",
                 hx_confirm="Delete this transaction?",
                 cls="btn btn-ghost btn-xs text-error",
             ),
@@ -63,6 +66,7 @@ def transaction_row_edit(txn: Transaction, accounts: list[Account], categories: 
     ]
 
     return Div(
+        form_error(),
         Input(type="date", name="date", value=iso_date,
               cls="input input-bordered input-sm w-32"),
         Input(type="text", name="label", value=txn.label,
@@ -85,8 +89,8 @@ def transaction_row_edit(txn: Transaction, accounts: list[Account], categories: 
         Button(
             "Save",
             hx_put=f"/transactions/{txn.id}",
-            hx_include=f"#transaction-{txn.id} input, #transaction-{txn.id} select, #transaction-filters",
-            hx_target="#transaction-list",
+            hx_include=f"#transaction-{txn.id} input, #transaction-{txn.id} select",
+            hx_target="#transaction-results",
             hx_swap="outerHTML",
             cls="btn btn-primary btn-xs",
         ),
@@ -97,6 +101,7 @@ def transaction_row_edit(txn: Transaction, accounts: list[Account], categories: 
             hx_swap="outerHTML",
             cls="btn btn-ghost btn-xs",
         ),
+        data_error_scope="true",
         id=f"transaction-{txn.id}",
         data_testid="transaction-row-edit",
         onkeydown="if(event.key==='Enter'&&event.target.tagName==='INPUT'){event.preventDefault();this.querySelector('button[hx-put]').click()}",
@@ -167,6 +172,7 @@ def transaction_form(accounts: list[Account], categories: list[Category],
     return Div(
         H2("Add Transaction", cls="text-sm font-semibold text-base-content/80"),
         Form(
+            form_error(),
             Input(type="hidden", name="account_type", value=account_type),
             Div(
                 Label("Date", fr="transaction-date", cls="label-text"),
@@ -244,183 +250,12 @@ def transaction_form(accounts: list[Account], categories: list[Category],
                      cls="hidden text-xs cc-muted"),
                 cls="cc-form-actions items-center gap-3",
             ),
+            data_error_scope="true",
             id="transaction-form",
             hx_post="/transactions",
-            hx_target="#transaction-list",
+            hx_target="#transaction-results",
             hx_swap="outerHTML",
             cls="cc-form-stack",
-        ),
-        Script(
-            """
-            (() => {
-              const initTransactionForm = () => {
-                const form = document.getElementById('transaction-form');
-                if (!form || form.dataset.transactionFormReady === 'true') return;
-                form.dataset.transactionFormReady = 'true';
-
-                const dateInput = form.querySelector('input[name="date"]');
-                const labelInput = form.querySelector('input[name="label"]');
-                const amountInput = form.querySelector('input[name="amount"]');
-                const amountMode = form.querySelector('select[name="amount_mode"]');
-                const accountSelect = form.querySelector('select[name="account_id"]');
-                const categorySelect = form.querySelector('select[name="category_id"]');
-                const status = document.getElementById('transaction-form-status');
-                const todayButton = document.getElementById('transaction-date-today');
-                const notice = document.getElementById('transaction-date-notice');
-                const noticeText = document.getElementById('transaction-date-notice-text');
-                const useTodayButton = document.getElementById('transaction-date-use-today');
-                const keepDateButton = document.getElementById('transaction-date-keep');
-
-                if (!dateInput) return;
-
-                let dateDirty = false;
-                let dismissedNoticeKey = '';
-                const recommendationPanel = () => document.getElementById('transaction-category-recommendation');
-
-                const localToday = () => {
-                  const now = new Date();
-                  const month = String(now.getMonth() + 1).padStart(2, '0');
-                  const day = String(now.getDate()).padStart(2, '0');
-                  return `${now.getFullYear()}-${month}-${day}`;
-                };
-
-                const formatDate = (isoDate) => {
-                  if (!isoDate) return '';
-                  return new Date(`${isoDate}T12:00:00`).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                  });
-                };
-
-                const setStatus = (message) => {
-                  if (!status) return;
-                  status.textContent = message || '';
-                  status.classList.toggle('hidden', !message);
-                };
-
-                const hideNotice = () => {
-                  if (!notice) return;
-                  notice.classList.add('hidden');
-                  notice.classList.remove('flex');
-                };
-
-                const showNotice = (selectedDate, today) => {
-                  if (!notice || !noticeText) return;
-                  noticeText.textContent = `This form is dated ${formatDate(selectedDate)}. Today is ${formatDate(today)}.`;
-                  notice.classList.remove('hidden');
-                  notice.classList.add('flex');
-                };
-
-                const setDateFromSystem = (value) => {
-                  dateInput.dataset.systemDateChange = 'true';
-                  dateInput.value = value;
-                  dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-                  delete dateInput.dataset.systemDateChange;
-                };
-
-                const hasDraft = () => {
-                  if (dateDirty) return true;
-                  if ((labelInput?.value || '').trim()) return true;
-                  if ((amountInput?.value || '').trim()) return true;
-                  return !!categorySelect && categorySelect.value !== '0';
-                };
-
-                const checkStaleDate = () => {
-                  const today = localToday();
-                  const selectedDate = dateInput.value;
-                  if (!selectedDate || selectedDate === today) {
-                    hideNotice();
-                    return;
-                  }
-
-                  const noticeKey = `${selectedDate}|${today}`;
-                  if (!hasDraft()) {
-                    setDateFromSystem(today);
-                    hideNotice();
-                    return;
-                  }
-
-                  if (dismissedNoticeKey !== noticeKey) {
-                    showNotice(selectedDate, today);
-                  }
-                };
-
-                dateInput.addEventListener('change', () => {
-                  if (dateInput.dataset.systemDateChange !== 'true') {
-                    dateDirty = true;
-                    dismissedNoticeKey = '';
-                  }
-                  if (dateInput.value === localToday()) {
-                    hideNotice();
-                  }
-                });
-
-                todayButton?.addEventListener('click', () => {
-                  setDateFromSystem(localToday());
-                  dateDirty = false;
-                  dismissedNoticeKey = '';
-                  hideNotice();
-                  setStatus('');
-                });
-
-                useTodayButton?.addEventListener('click', () => {
-                  setDateFromSystem(localToday());
-                  dateDirty = false;
-                  dismissedNoticeKey = '';
-                  hideNotice();
-                });
-
-                keepDateButton?.addEventListener('click', () => {
-                  dismissedNoticeKey = `${dateInput.value}|${localToday()}`;
-                  hideNotice();
-                });
-
-                document.body.addEventListener('htmx:beforeSwap', (event) => {
-                  const target = event.detail?.target;
-                  if (target?.id !== 'transaction-category-recommendation') return;
-                  if ((labelInput?.value || '').trim() && (amountInput?.value || '').trim()) return;
-
-                  event.detail.shouldSwap = false;
-                  target.innerHTML = '';
-                });
-
-                form.addEventListener('htmx:afterRequest', (event) => {
-                  const source = event.detail?.elt || event.target;
-                  if (source !== form || !event.detail?.successful) return;
-
-                  const preservedDate = dateInput.value;
-                  const preservedAccount = accountSelect?.value || '';
-                  const preservedMode = amountMode?.value || 'debit';
-
-                  form.reset();
-                  dateInput.value = preservedDate;
-                  if (accountSelect) accountSelect.value = preservedAccount;
-                  if (amountMode) amountMode.value = preservedMode;
-                  if (categorySelect) categorySelect.value = '0';
-                  const recommendation = recommendationPanel();
-                  if (recommendation) recommendation.innerHTML = '';
-
-                  dateDirty = preservedDate !== localToday();
-                  dismissedNoticeKey = '';
-                  hideNotice();
-                  setStatus(`Added. Ready for another transaction on ${formatDate(preservedDate)}.`);
-                  labelInput?.focus();
-                });
-
-                document.addEventListener('visibilitychange', () => {
-                  if (!document.hidden) checkStaleDate();
-                });
-                window.addEventListener('focus', checkStaleDate);
-                checkStaleDate();
-              };
-
-              if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initTransactionForm);
-              } else {
-                initTransactionForm();
-              }
-            })();
-            """
         ),
         cls="cc-crud-panel",
     )
@@ -433,21 +268,18 @@ def transactions_list(groups: list, f, categories: list[Category]):
     expenses_cls = "join-item btn btn-sm btn-warning" if mode == "expenses" else "join-item btn btn-sm btn-ghost"
     nw_cls = "join-item btn btn-sm btn-success" if mode == "net_worth" else "join-item btn btn-sm btn-ghost"
 
-    exp_href = f"/transactions?account_type=expenses"
-    if f.date_preset:
-        exp_href += f"&date_preset={f.date_preset}"
-    if f.label:
-        exp_href += f"&label={f.label}"
-
-    nw_href = f"/transactions?account_type=net_worth"
-    if f.date_preset:
-        nw_href += f"&date_preset={f.date_preset}"
-    if f.label:
-        nw_href += f"&label={f.label}"
+    params = [("date_preset", f.date_preset or "custom"), ("label", f.label or "")]
+    params.extend(("category_id", str(cid)) for cid in f.category_ids or [])
+    if f.date_from:
+        params.append(("date_from", f.date_from))
+    if f.date_to:
+        params.append(("date_to", f.date_to))
+    exp_href = "/transactions?" + urlencode([("account_type", "expenses"), *params])
+    nw_href = "/transactions?" + urlencode([("account_type", "net_worth"), *params])
 
     mode_toggle = Div(
-        A("Expenses", href=exp_href, cls=expenses_cls),
-        A("Net Worth", href=nw_href, cls=nw_cls),
+        A("Expenses", href=exp_href, cls=expenses_cls, data_transaction_mode="expenses"),
+        A("Net Worth", href=nw_href, cls=nw_cls, data_transaction_mode="net_worth"),
         cls="join mb-4",
     )
 
@@ -459,16 +291,13 @@ def transactions_list(groups: list, f, categories: list[Category]):
         preset_btns.append(Button(
             preset_label,
             type="button",
-            hx_get="/partials/transactions",
-            hx_vals=f'{{"date_preset":"{preset_val}"}}',
-            hx_include="#transaction-filters",
-            hx_target="#transaction-list",
-            hx_swap="outerHTML",
+            data_date_preset=preset_val,
             cls=btn_cls,
         ))
 
     filter_form = Form(
         Input(type="hidden", name="account_type", value=mode),
+        Input(type="hidden", name="date_preset", value=f.date_preset or "custom"),
         Div(*preset_btns, cls="flex flex-wrap gap-2 mb-3"),
         Div(
             Input(type="text", name="label", id="label-search", value=f.label or "",
@@ -478,7 +307,7 @@ def transactions_list(groups: list, f, categories: list[Category]):
                 checklist_filter(
                     "Categories",
                     "category_id",
-                    categories,
+                    [*categories, Category(id=0, label="Uncategorized")],
                     set(f.category_ids or []),
                     "transaction-category-filter",
                     empty_summary="All",
@@ -487,14 +316,42 @@ def transactions_list(groups: list, f, categories: list[Category]):
             ),
             cls="flex flex-wrap gap-3 items-start",
         ),
+        Div(
+            Div(
+                Label("From", fr="transaction-date-from", cls="text-xs cc-muted"),
+                Input(type="date", name="date_from", id="transaction-date-from", value=f.date_from or "",
+                      cls="input input-bordered input-sm w-full",
+                      onchange="this.form.elements.date_preset.value='custom'"),
+                cls="flex flex-col gap-1 flex-1 min-w-0",
+            ),
+            Div(
+                Label("Through", fr="transaction-date-to", cls="text-xs cc-muted"),
+                Input(type="date", name="date_to", id="transaction-date-to", value=f.date_to or "",
+                      cls="input input-bordered input-sm w-full",
+                      onchange="this.form.elements.date_preset.value='custom'"),
+                cls="flex flex-col gap-1 flex-1 min-w-0",
+            ),
+            cls="flex gap-3 mt-3",
+        ),
         id="transaction-filters",
         hx_get="/partials/transactions",
-        hx_trigger="change, keyup changed delay:300ms from:#label-search",
-        hx_target="#transaction-list",
+        hx_trigger="change, input changed delay:300ms from:#label-search",
+        hx_sync="#transaction-filters:replace",
+        hx_target="#transaction-results",
         hx_swap="outerHTML",
         cls="cc-glass relative z-30 rounded-xl p-4 mb-4",
     )
 
+    return Div(
+        mode_toggle,
+        filter_form,
+        transaction_results(groups, f, categories),
+        id="transaction-list", data_testid="transaction-list",
+    )
+
+
+def transaction_results(groups: list, f, categories: list[Category]):
+    mode = f.account_type
     # Transaction groups
     group_sections = []
     for g in groups:
@@ -519,11 +376,10 @@ def transactions_list(groups: list, f, categories: list[Category]):
         ]
 
     return Div(
-        mode_toggle,
-        filter_form,
+        category_breakdown_panel(category_breakdown([txn for group in groups for txn in group["transactions"]]), expenses=(mode == "expenses")),
         Div(*group_sections, cls="flex flex-col gap-6"),
-        id="transaction-list",
-        data_testid="transaction-list",
+        id="transaction-results",
+        data_testid="transaction-results",
     )
 
 

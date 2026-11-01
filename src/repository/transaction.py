@@ -69,9 +69,15 @@ class TransactionRepository:
             sql += f" AND t.account_id IN ({placeholders})"
             args.extend(f.account_ids)
         if f.category_ids:
-            placeholders = ",".join("?" * len(f.category_ids))
-            sql += f" AND t.category_id IN ({placeholders})"
-            args.extend(f.category_ids)
+            category_ids = [cid for cid in f.category_ids if cid != 0]
+            conditions = []
+            if category_ids:
+                placeholders = ",".join("?" * len(category_ids))
+                conditions.append(f"t.category_id IN ({placeholders})")
+                args.extend(category_ids)
+            if 0 in f.category_ids:
+                conditions.append("t.category_id IS NULL")
+            sql += " AND (" + " OR ".join(conditions) + ")"
         if f.account_type:
             sql += " AND t.account_id IN (SELECT id FROM accounts WHERE account_type = ?)"
             args.append(f.account_type)
@@ -135,6 +141,19 @@ class TransactionRepository:
             self.db.conn.rollback()
             raise
         return len(records)
+
+    def has_account_transactions(self, account_id: int) -> bool:
+        return self.db.execute("SELECT 1 FROM transactions WHERE account_id = ? LIMIT 1", [account_id]).fetchone() is not None
+
+    def update(self, id: int, iso8601: str, date: str, amount: int, label: str,
+               account_id: int, account_label: str, category_id: Optional[int], category_label: str):
+        self.db.execute(
+            """UPDATE transactions SET iso8601 = ?, yyyy_mm_dd = ?, amount = ?, label = ?,
+               account_id = ?, account_label = ?, category_id = ?, category_label = ?,
+               updated_at = datetime('now') WHERE id = ?""",
+            [iso8601, date, amount, label, account_id, account_label, category_id, category_label, id],
+        )
+        self.db.commit()
 
     def update_amount(self, id: int, amount: int):
         self.db.execute("UPDATE transactions SET amount = ?, updated_at = datetime('now') WHERE id = ?", [amount, id])
