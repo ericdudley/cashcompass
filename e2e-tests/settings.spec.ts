@@ -44,13 +44,14 @@ test('backup export returns canonical JSON', async ({ request }) => {
 
 	const payload = await response.json();
 	expect(payload.format).toBe('cashcompass.backup');
-	expect(payload.version).toBe(2);
+	expect(payload.version).toBe(3);
 	expect(payload.app).toEqual({ name: 'CashCompass' });
-	expect(payload.schema).toEqual({ entities: ['accounts', 'categories', 'transactions', 'annual_incomes'] });
+	expect(payload.schema).toEqual({ entities: ['accounts', 'categories', 'transactions', 'annual_incomes', 'monthly_budgets'] });
 	expect(payload.accounts[0].id).toMatch(/^acct_/);
 	expect(payload.categories[0].id).toMatch(/^cat_/);
 	expect(payload.transactions[0].id).toMatch(/^txn_/);
 	expect(payload.annual_incomes).toEqual([]);
+	expect(payload.monthly_budgets).toEqual([]);
 });
 
 test('transactions export returns interoperability CSV', async ({ request }) => {
@@ -256,6 +257,7 @@ test('legacy import and export endpoints are removed', async ({ request }) => {
 });
 
 test('dev-only reset flow clears backup data', async ({ request, page }) => {
+	await request.post('/budget/limits', { form: { month: '2024-02', limit_0: '50', limit_1: '100' } });
 	const response = await request.post('/settings/reset-database');
 	expect(response.ok()).toBeTruthy();
 
@@ -269,6 +271,7 @@ test('dev-only reset flow clears backup data', async ({ request, page }) => {
 	expect(payload.categories).toEqual([]);
 	expect(payload.transactions).toEqual([]);
 	expect(payload.annual_incomes).toEqual([]);
+	expect(payload.monthly_budgets).toEqual([]);
 });
 
 test('version 1 backups remain importable without annual income', async ({ request }) => {
@@ -290,6 +293,6 @@ test('version 1 backups remain importable without annual income', async ({ reque
 
 	expect(importResponse.ok()).toBeTruthy();
 	const restored = await (await request.get('/settings/export/backup')).json();
-	expect(restored.version).toBe(2);
+	expect(restored.version).toBe(3);
 	expect(restored.annual_incomes).toEqual([]);
 });

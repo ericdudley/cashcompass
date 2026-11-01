@@ -39,4 +39,6 @@ class AccountService:
         return self.repo.get_by_id(id)
 
     def delete(self, id: int):
+        if self.txn_repo.has_account_transactions(id):
+            raise ValueError("This account contains transactions. Archive it or move its transactions before deleting it.")
         self.repo.delete(id)

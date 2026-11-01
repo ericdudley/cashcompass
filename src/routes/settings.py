@@ -8,6 +8,7 @@ from starlette.responses import RedirectResponse, Response as StarletteResponse
 from src.services.account import AccountService
 from src.services.annual_income import AnnualIncomeService
 from src.services.backup import BackupService
+from src.services.budget import BudgetService
 from src.services.category import CategoryService
 from src.services.transaction import TransactionService
 from src.models import TransactionFilter
@@ -16,7 +17,7 @@ from src.components.layout import page_layout
 
 def register(rt, acct_svc: AccountService, cat_svc: CategoryService,
              txn_svc: TransactionService, income_svc: AnnualIncomeService,
-             backup_svc: BackupService, dev_mode: bool):
+             backup_svc: BackupService, budget_svc: BudgetService, dev_mode: bool):
 
     @rt("/settings", methods=["GET"])
     def get(req: Request):
@@ -75,6 +76,8 @@ def register(rt, acct_svc: AccountService, cat_svc: CategoryService,
     def post_reset():
         if not dev_mode:
             return StarletteResponse("not available", status_code=403)
+
+        budget_svc.clear_limits()
 
         incomes = income_svc.list()
         for income in incomes:

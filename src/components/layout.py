@@ -51,12 +51,13 @@ def nav_bar(active: str):
             Div(
                 link("/dashboard", "dashboard", "Dashboard"),
                 link("/flow", "flow", "Flow"),
+                link("/budget", "budget", "Budget"),
                 link("/income", "income", "Annual Income"),
                 link("/accounts", "accounts", "Accounts"),
                 link("/categories", "categories", "Categories"),
                 link("/transactions", "transactions", "Transactions"),
                 link("/settings", "settings", "Settings"),
-                cls="hidden lg:flex items-center gap-5 text-sm",
+                cls="hidden lg:flex items-center gap-4 text-sm",
             ),
             Div(
                 Label("Theme", fr="theme-picker", cls="sr-only"),
@@ -68,11 +69,12 @@ def nav_bar(active: str):
                 cls="btn btn-ghost btn-sm lg:hidden text-xl",
                 onclick="document.getElementById('mobile-nav').classList.toggle('hidden')",
             ),
-            cls="mx-auto flex max-w-5xl items-center justify-between px-6 h-16 gap-4",
+            cls="mx-auto flex max-w-7xl items-center justify-between px-6 h-16 gap-4",
         ),
         Div(
             mobile_link("/dashboard", "dashboard", "Dashboard"),
             mobile_link("/flow", "flow", "Flow"),
+            mobile_link("/budget", "budget", "Budget"),
             mobile_link("/income", "income", "Annual Income"),
             mobile_link("/accounts", "accounts", "Accounts"),
             mobile_link("/categories", "categories", "Categories"),

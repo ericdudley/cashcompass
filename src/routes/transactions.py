@@ -1,12 +1,11 @@
 from __future__ import annotations
-import math
 import logging
-from datetime import datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from fasthtml.common import *
 from fasthtml.common import to_xml
 from starlette.responses import Response as StarletteResponse
+from starlette.datastructures import QueryParams
 
 from src.models import TransactionFilter
 from src.services.account import AccountService
@@ -14,10 +13,11 @@ from src.services.category import CategoryService
 from src.services.category_recommendation import CategoryRecommendationService
 from src.services.transaction import TransactionService
 from src.components.transactions import (
-    transaction_category_recommendation_panel, transaction_row, transaction_row_edit, transactions_list, transactions_page
+    transaction_category_recommendation_panel, transaction_row, transaction_row_edit, transaction_results, transactions_page
 )
 from src.components.layout import page_layout
-from src.utils.dates import preset_to_dates
+from src.utils.dates import preset_to_dates, local_today
+from src.utils.format import parse_cents, validate_cents
 
 logger = logging.getLogger("cashcompass.ai")
 
@@ -45,12 +45,15 @@ def _parse_filter(query_params, form_data=None) -> TransactionFilter:
 
     if not date_preset and not date_from and not date_to:
         date_preset = "this_month"
+    if date_preset in ("this_month", "last_month", "this_year", "all_time"):
+        date_from = ""
+        date_to = ""
 
     label = q.get("label", "")
     if isinstance(label, list):
         label = label[0]
 
-    cat_ids_raw = q.get("category_id", [])
+    cat_ids_raw = query_params.getlist("category_id") if hasattr(query_params, "getlist") else q.get("category_id", [])
     if isinstance(cat_ids_raw, str):
         cat_ids_raw = [cat_ids_raw]
     category_ids = []
@@ -69,13 +72,22 @@ def _parse_filter(query_params, form_data=None) -> TransactionFilter:
     ), date_preset
 
 
+def _mutation_filter(req: Request, form_data=None):
+    # HTMX sends the displayed URL, which tracks the active filters. Keep those
+    # separate from the transaction's own label/category fields in the body.
+    query = req.query_params
+    if not query:
+        query = QueryParams(urlsplit(req.headers.get("HX-Current-URL", "")).query)
+    return _parse_filter(query, form_data)
+
+
 def _filter_to_model(f: TransactionFilter, date_preset: str) -> TransactionFilter:
     mf = TransactionFilter(
         label=f.label,
         category_ids=f.category_ids,
         account_type=f.account_type,
     )
-    if date_preset and date_preset != "all_time":
+    if date_preset in ("this_month", "last_month", "this_year"):
         dfrom, dto = preset_to_dates(date_preset)
         mf.date_from = dfrom
         mf.date_to = dto
@@ -130,22 +142,13 @@ def _build_filter_state(f: TransactionFilter, date_preset: str):
 
 
 def _parse_amount_cents(amount_str: str, mode: str) -> int:
-    try:
-        amount = float(amount_str)
-    except (ValueError, TypeError):
-        return 0
-
-    cents = int(math.floor(abs(amount) * 100 + 0.5))
-    if mode == "debit":
-        cents = -cents
-    return cents
+    if mode not in ("debit", "credit"):
+        raise ValueError("transaction amount mode is invalid")
+    cents = abs(parse_cents(amount_str))
+    return validate_cents(-cents if mode == "debit" else cents)
 
 
 def _parse_amount_cents_strict(amount_str: str, mode: str) -> int:
-    try:
-        float(amount_str)
-    except (ValueError, TypeError) as exc:
-        raise ValueError("transaction amount must be a number") from exc
     return _parse_amount_cents(amount_str, mode)
 
 
@@ -179,7 +182,7 @@ def register(
         form_data = {
             "accounts": mode_accts,
             "categories": cats,
-            "today": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "today": local_today().isoformat(),
             "last_account_id": last_acct,
             "account_type": f.account_type,
             "ai_enabled": category_recommendation_svc.is_enabled,
@@ -197,7 +200,10 @@ def register(
         account_id_str = form.get("account_id", "")
         category_id_str = form.get("category_id", "0")
 
-        cents = _parse_amount_cents(amt_str, mode)
+        try:
+            cents = _parse_amount_cents(amt_str, mode)
+        except ValueError as exc:
+            return Response(str(exc), status_code=400)
 
         try:
             account_id = int(account_id_str)
@@ -227,7 +233,7 @@ def register(
             return Response(str(exc), status_code=400)
 
         # Re-render list with current filter state
-        f, date_preset = _parse_filter(req.query_params, dict(form))
+        f, date_preset = _mutation_filter(req, dict(form))
         mf = _filter_to_model(f, date_preset)
         txns = txn_svc.list(mf)
         cats = cat_svc.list()
@@ -235,7 +241,7 @@ def register(
         fs = _build_filter_state(f, date_preset)
 
         response = StarletteResponse(
-            to_xml(transactions_list(groups, fs, cats)),
+            to_xml(transaction_results(groups, fs, cats)),
             media_type="text/html",
         )
         response.set_cookie("last_account_id", str(account_id or ""), path="/")
@@ -251,7 +257,10 @@ def register(
         label = str(form.get("label", "") or "").strip()
         mode = str(form.get("amount_mode", "debit") or "debit")
         category_id_str = str(form.get("category_id", "0") or "0")
-        cents = _parse_amount_cents(str(form.get("amount", "0") or "0"), mode)
+        try:
+            cents = _parse_amount_cents(str(form.get("amount", "0") or "0"), mode)
+        except ValueError:
+            return transaction_category_recommendation_panel(True)
         if not date_str or not label or cents == 0:
             logger.info(
                 "Skipping category recommendation; incomplete inputs date=%s label_present=%s amount_cents=%s",
@@ -303,7 +312,7 @@ def register(
 
         push_url = "/transactions?" + _filter_qs(f, date_preset)
         return StarletteResponse(
-            to_xml(transactions_list(groups, fs, cats)),
+            to_xml(transaction_results(groups, fs, cats)),
             media_type="text/html",
             headers={"HX-Push-Url": push_url},
         )
@@ -325,61 +334,54 @@ def register(
         form_data = dict(form)
         date_str = form.get("date")
         label = form.get("label")
-        amt_str = form.get("amount", "")
+        amt_str = form.get("amount")
         mode = form.get("amount_mode", "debit")
         account_id_str = form.get("account_id")
         category_id_str = form.get("category_id")
 
         try:
-            if date_str is not None:
-                txn_svc.update_date(id, date_str, date_str.replace("-", "_"))
-
-            if label is not None:
-                txn_svc.update_label(id, label)
-
-            if amt_str != "":
-                cents = _parse_amount_cents_strict(amt_str, mode)
-                txn_svc.update_amount(id, cents)
+            existing = txn_svc.get_by_id(id)
+            iso_date = date_str if date_str is not None else existing.iso8601
+            storage_date = date_str.replace("-", "_") if date_str is not None else existing.date
+            new_label = label if label is not None else existing.label
+            cents = _parse_amount_cents_strict(amt_str, mode) if amt_str is not None else existing.amount
+            aid, acct_label = existing.account_id, existing.account_label
+            cid, cat_label = existing.category_id, existing.category_label
 
             if account_id_str is not None:
                 try:
                     aid = int(account_id_str)
-                    acct = acct_svc.get_by_id(aid)
-                except Exception as exc:
+                    acct_label = acct_svc.get_by_id(aid).label
+                except (ValueError, TypeError) as exc:
                     raise ValueError("transaction account is invalid") from exc
-                txn_svc.update_account(id, aid, acct.label)
 
             if category_id_str is not None:
                 try:
                     cid = int(category_id_str)
+                    cat_label = cat_svc.get_by_id(cid).label if cid > 0 else ""
+                    cid = cid if cid > 0 else None
                 except (ValueError, TypeError) as exc:
                     raise ValueError("transaction category is invalid") from exc
-                if cid > 0:
-                    try:
-                        cat = cat_svc.get_by_id(cid)
-                    except Exception as exc:
-                        raise ValueError("transaction category is invalid") from exc
-                    txn_svc.update_category(id, cid, cat.label)
-                else:
-                    txn_svc.update_category(id, None, "")
+
+            txn_svc.update(id, iso_date, storage_date, cents, new_label, aid, acct_label, cid, cat_label)
         except ValueError as exc:
             return Response(str(exc), status_code=400)
 
-        f, date_preset = _parse_filter(req.query_params, form_data)
+        f, date_preset = _mutation_filter(req, form_data)
         mf = _filter_to_model(f, date_preset)
         txns = txn_svc.list(mf)
         cats = cat_svc.list()
         groups = _group_transactions(txns)
         fs = _build_filter_state(f, date_preset)
-        return transactions_list(groups, fs, cats)
+        return transaction_results(groups, fs, cats)
 
     @rt("/transactions/{id}", methods=["DELETE"])
     def delete(req: Request, id: int):
         txn_svc.delete(id)
-        f, date_preset = _parse_filter(req.query_params)
+        f, date_preset = _mutation_filter(req)
         mf = _filter_to_model(f, date_preset)
         txns = txn_svc.list(mf)
         cats = cat_svc.list()
         groups = _group_transactions(txns)
         fs = _build_filter_state(f, date_preset)
-        return transactions_list(groups, fs, cats)
+        return transaction_results(groups, fs, cats)

@@ -14,11 +14,13 @@ test('nav links to flow, annual income, accounts, and categories from home', asy
 		await expect(page.locator('#mobile-nav a[href="/accounts"]')).toBeVisible();
 		await expect(page.locator('#mobile-nav a[href="/categories"]')).toBeVisible();
 		await expect(page.locator('#mobile-nav a[href="/flow"]')).toBeVisible();
+		await expect(page.locator('#mobile-nav a[href="/budget"]')).toBeVisible();
 		await expect(page.locator('#mobile-nav a[href="/income"]')).toBeVisible();
 	} else {
 		await expect(page.locator('nav a[href="/accounts"]').first()).toBeVisible();
 		await expect(page.locator('nav a[href="/categories"]').first()).toBeVisible();
 		await expect(page.locator('nav a[href="/flow"]').first()).toBeVisible();
+		await expect(page.locator('nav a[href="/budget"]').first()).toBeVisible();
 		await expect(page.locator('nav a[href="/income"]').first()).toBeVisible();
 	}
 });

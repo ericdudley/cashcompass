@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.models import AnnualIncome
 from src.repository.annual_income import AnnualIncomeRepository
+from src.utils.format import validate_cents
 
 
 class AnnualIncomeService:
@@ -73,6 +74,8 @@ class AnnualIncomeService:
     ) -> tuple[int, int, int, int, str]:
         if isinstance(tax_year, bool) or not isinstance(tax_year, int) or not 1900 <= tax_year <= 9999:
             raise ValueError("tax year must be between 1900 and 9999")
+        for amount in (gross_income_cents, federal_tax_cents, state_tax_cents):
+            validate_cents(amount)
         if gross_income_cents <= 0:
             raise ValueError("gross income must be greater than zero")
         if federal_tax_cents < 0 or state_tax_cents < 0:
