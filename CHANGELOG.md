@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/ericdudley/cashcompass/compare/v0.9.0...v0.10.0) (2026-11-02)
+
+
+### Features
+
+* Budget annual ([#21](https://github.com/ericdudley/cashcompass/issues/21)) ([48ef0c6](https://github.com/ericdudley/cashcompass/commit/48ef0c6324988918b18a382db9955871e6d2f085))
+
 ## [0.9.0](https://github.com/ericdudley/cashcompass/compare/v0.8.0...v0.9.0) (2026-11-01)
 
 
