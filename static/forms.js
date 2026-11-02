@@ -1,16 +1,4 @@
 (() => {
-  // Keep inherited contributions out of the submission unless the user edits them.
-  document.addEventListener('formdata', (event) => {
-    if (!event.target.matches('[data-testid="budget-limits-form"]')) return;
-    for (const input of event.target.querySelectorAll('input[name^="limit_"]')) {
-      const value = input.value.trim();
-      const original = input.defaultValue.trim();
-      if (value === original) {
-        event.formData.delete(input.name);
-      }
-    }
-  });
-
   document.addEventListener('htmx:afterRequest', (event) => {
     const source = event.detail.requestConfig?.elt || event.detail.elt;
     const scope = source?.closest('[data-error-scope]');

@@ -9,16 +9,13 @@
       panel.open = sessionStorage.getItem(breakdownKey) === 'true';
     }
   };
-  document.addEventListener('toggle', event => {
-    if (event.target.id === 'transaction-category-breakdown') {
-      sessionStorage.setItem(breakdownKey, String(event.target.open));
-    }
-  }, true);
-  document.addEventListener('DOMContentLoaded', restoreBreakdown);
-  document.addEventListener('htmx:beforeSwap', () => {
-    const panel = document.getElementById('transaction-category-breakdown');
-    if (panel) sessionStorage.setItem(breakdownKey, String(panel.open));
+  // Save user intent synchronously. Native toggle events and HTMX swaps can arrive
+  // out of order, so a transient closed replacement must not overwrite the choice.
+  document.addEventListener('click', event => {
+    const summary = event.target.closest('#transaction-category-breakdown > summary');
+    if (summary) sessionStorage.setItem(breakdownKey, String(!summary.parentElement.open));
   });
+  document.addEventListener('DOMContentLoaded', restoreBreakdown);
   document.addEventListener('htmx:afterSwap', restoreBreakdown);
   document.addEventListener('htmx:historyRestore', restoreBreakdown);
 

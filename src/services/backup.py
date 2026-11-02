@@ -14,8 +14,8 @@ from src.repository.transaction import TransactionRepository
 from src.services.budget import month_bounds
 
 SUPPORTED_FORMAT = "cashcompass.backup"
-SUPPORTED_VERSION = 4
-IMPORTABLE_VERSIONS = {1, 2, 3, 4}
+SUPPORTED_VERSION = 5
+IMPORTABLE_VERSIONS = {1, 2, 3, 4, 5}
 
 
 def _now_utc() -> str:
@@ -128,7 +128,15 @@ class BackupService:
             "version": SUPPORTED_VERSION,
             "exported_at": _now_utc(),
             "app": {"name": "CashCompass"},
-            "schema": {"entities": ["accounts", "categories", "transactions", "annual_incomes", "monthly_budgets"]},
+            "schema": {"entities": ["accounts", "categories", "transactions", "annual_incomes", "monthly_budgets", "budget_plans", "monthly_budget_rollover"]},
+            "budget_plans": [
+                {"year": plan.year, "category_id": category_uids.get(plan.category_id), "period": plan.period,
+                 "annual_amount_cents": plan.annual_amount_cents} for plan in self.budget_repo.list_plans()
+            ],
+            "monthly_budget_rollover": [
+                {"month": change.month, "category_id": category_uids.get(change.category_id), "enabled": change.enabled}
+                for change in self.budget_repo.list_rollover()
+            ],
             "monthly_budgets": [
                 {"month": budget.month, "category_id": category_uids.get(budget.category_id), "amount_cents": budget.amount_cents}
                 for budget in self.budget_repo.list()
@@ -371,8 +379,59 @@ class BackupService:
             budget_keys.add(key)
             budget_rows.append((month, category_uid_to_id.get(category_uid), amount))
 
+        def budget_category(record):
+            uid = record.get("category_id")
+            if uid is not None:
+                uid = _require_str(uid, "budget category_id")
+                if uid not in category_uid_to_id:
+                    raise ValueError("budget category_id does not resolve")
+            return category_uid_to_id.get(uid)
+
+        plan_rows, rollover_rows = [], []
+        plan_keys, rollover_keys = set(), set()
+        if payload["version"] >= 5:
+            for plan in payload["budget_plans"]:
+                if not isinstance(plan, dict):
+                    raise ValueError("budget plan must be an object")
+                year = _require_int(plan.get("year"), "budget plan year")
+                if not 1 <= year <= 9999 or plan.get("period") not in ("monthly", "annual"):
+                    raise ValueError("invalid budget plan year or period")
+                if "annual_amount_cents" not in plan:
+                    raise ValueError("annual_amount_cents is required")
+                amount = plan["annual_amount_cents"]
+                if amount is not None:
+                    amount = _require_int(amount, "annual_amount_cents")
+                    if not 0 <= amount <= 2**63 - 1 or plan["period"] != "annual":
+                        raise ValueError("invalid annual budget amount")
+                category_id = budget_category(plan)
+                key = (year, category_id)
+                if key in plan_keys:
+                    raise ValueError("duplicate budget plan")
+                plan_keys.add(key)
+                plan_rows.append((year, category_id, plan["period"], amount))
+            for change in payload["monthly_budget_rollover"]:
+                if not isinstance(change, dict):
+                    raise ValueError("rollover change must be an object")
+                month = _require_str(change.get("month"), "rollover month")
+                month_bounds(month)
+                category_id = budget_category(change)
+                enabled = _require_bool(change.get("enabled"), "rollover enabled")
+                key = (month, category_id)
+                if key in rollover_keys:
+                    raise ValueError("duplicate rollover change")
+                rollover_keys.add(key)
+                rollover_rows.append((month, category_id, int(enabled)))
+        else:
+            earliest = {}
+            for month, category_id, _ in budget_rows:
+                earliest[category_id] = min(month, earliest.get(category_id, month))
+            plan_rows = [(int(month[:4]), key, "monthly", None) for key, month in earliest.items()]
+            rollover_rows = [(month, key, 1) for key, month in earliest.items()]
+
         try:
             self.db.conn.execute("BEGIN")
+            self.db.execute("DELETE FROM budget_plans")
+            self.db.execute("DELETE FROM monthly_budget_rollover")
             self.db.execute("DELETE FROM monthly_budgets")
             self.db.execute("DELETE FROM annual_incomes")
             self.db.execute("DELETE FROM transactions")
@@ -396,6 +455,12 @@ class BackupService:
             )
             self.db.conn.executemany(
                 "INSERT INTO monthly_budgets (month, category_id, amount_cents) VALUES (?, ?, ?)", budget_rows,
+            )
+            self.db.conn.executemany(
+                "INSERT INTO budget_plans (year, category_id, period, annual_amount_cents) VALUES (?, ?, ?, ?)", plan_rows,
+            )
+            self.db.conn.executemany(
+                "INSERT INTO monthly_budget_rollover (month, category_id, enabled) VALUES (?, ?, ?)", rollover_rows,
             )
             self.db.conn.executemany(
                 """
@@ -443,13 +508,15 @@ class BackupService:
             "transactions": len(transaction_rows),
             "annual_incomes": len(annual_income_rows),
             "monthly_budgets": len(budget_rows),
+            "budget_plans": len(plan_rows),
+            "monthly_budget_rollover": len(rollover_rows),
         }
 
     def _validate_backup(self, payload: dict):
         if payload.get("format") != SUPPORTED_FORMAT:
             raise ValueError("unsupported backup format")
         version = payload.get("version")
-        if version not in IMPORTABLE_VERSIONS:
+        if isinstance(version, bool) or not isinstance(version, int) or version not in IMPORTABLE_VERSIONS:
             raise ValueError("unsupported backup version")
 
         for field in ("accounts", "categories", "transactions"):
@@ -460,6 +527,10 @@ class BackupService:
             raise ValueError("annual_incomes must be an array")
         if version >= 3 and not isinstance(payload.get("monthly_budgets"), list):
             raise ValueError("monthly_budgets must be an array")
+        if version >= 5:
+            for field in ("budget_plans", "monthly_budget_rollover"):
+                if not isinstance(payload.get(field), list):
+                    raise ValueError(f"{field} must be an array")
 
         self._validate_unique_ids(payload["accounts"], "accounts")
         self._validate_unique_ids(payload["categories"], "categories")

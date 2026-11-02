@@ -9,6 +9,8 @@ def register(rt, db: Database, dev_mode: bool):
 
     @rt("/dev/reset", methods=["POST"])
     def post():
+        db.execute("DELETE FROM budget_plans")
+        db.execute("DELETE FROM monthly_budget_rollover")
         db.execute("DELETE FROM monthly_budgets")
         db.execute("DELETE FROM annual_incomes")
         db.execute("DELETE FROM transactions")

@@ -345,3 +345,38 @@ main {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* A stable allowance scale: spent, current allowance, then rollover reserve. */
+.cc-budget-meter {
+    position: relative;
+    padding-block: 0.2rem;
+}
+.cc-budget-track {
+    display: flex;
+    height: 0.9rem;
+    overflow: hidden;
+    border-radius: 0.3rem;
+    background: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+}
+.cc-budget-segment { flex-shrink: 0; }
+.cc-budget-spent { background: color-mix(in oklab, var(--color-base-content) 55%, var(--color-base-100)); }
+.cc-budget-monthly { background: var(--color-primary); }
+.cc-budget-rollover { background: var(--color-secondary); }
+.cc-budget-over { background: var(--color-error); }
+.cc-budget-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    background: var(--color-base-content);
+    box-shadow: 0 0 0 1px var(--color-base-100);
+}
+.cc-budget-pace { background: var(--color-base-content); }
+.cc-budget-swatch {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.3rem;
+    border-radius: 0.1rem;
+}

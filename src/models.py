@@ -113,3 +113,18 @@ class MonthlyBudget:
     category_id: Optional[int] = None
     # Effective from this month until the next change; None stops tracking.
     amount_cents: Optional[int] = None
+
+
+@dataclass
+class BudgetPlan:
+    year: int = 0
+    category_id: Optional[int] = None
+    period: str = "monthly"
+    annual_amount_cents: Optional[int] = None
+
+
+@dataclass
+class MonthlyRolloverChange:
+    month: str = ""
+    category_id: Optional[int] = None
+    enabled: bool = False
