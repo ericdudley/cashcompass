@@ -325,18 +325,13 @@ test('label filter narrows results', async ({ page }) => {
 		mode: 'debit',
 	});
 	await tp.submitCreate();
+	await expect(tp.getRows().filter({ hasText: 'UniqueFilterLabel99' })).toBeVisible();
 
 	// Now filter by the unique label
 	await tp.getLabelSearch().fill('UniqueFilterLabel99');
-	// Trigger filter (keyup)
-	await tp.getLabelSearch().press('a');
-	await tp.getLabelSearch().press('Backspace');
-
-	// Wait for filtered results
-	await page.waitForTimeout(500);
-	await expect(page.locator('text=UniqueFilterLabel99')).toBeVisible();
-	const rows = await tp.getRows().count();
-	expect(rows).toBeGreaterThanOrEqual(1);
+	await expect(tp.getLabelSearch()).toHaveValue('UniqueFilterLabel99');
+	await expect(tp.getRows()).toHaveCount(1);
+	await expect(tp.getRows().first()).toContainText('UniqueFilterLabel99');
 });
 
 test('URL updates with filter params after preset change', async ({ page }) => {

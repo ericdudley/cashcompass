@@ -11,14 +11,14 @@ from starlette.datastructures import QueryParams
 
 from src.components.budget import budget_page, category_breakdown_panel
 from src.db import Database
-from src.models import Category, Transaction, TransactionFilter
+from src.models import Category, Transaction, TransactionFilter, MonthlyRolloverChange
 from src.repository.category import CategoryRepository
 from src.repository.account import AccountRepository
 from src.repository.annual_income import AnnualIncomeRepository
 from src.repository.budget import BudgetRepository
 from src.repository.transaction import TransactionRepository
 from src.routes.transactions import _parse_filter
-from src.services.budget import BudgetService, adjacent_month, category_breakdown, month_bounds, parse_budget_limit
+from src.services.budget import BudgetService, adjacent_month, category_breakdown, month_bounds, parse_budget_limit, budget_segments, budget_year
 from src.services.backup import BackupService
 from src.services.category import CategoryService
 from src.services.transaction import TransactionService
@@ -71,7 +71,7 @@ class BudgetServiceTests(unittest.TestCase):
         self.food = self.cats.create("Food")
         self.unused = self.cats.create("Unused")
         self.budgets = BudgetRepository(self.db)
-        self.service = BudgetService(self.txns, self.cats, self.budgets, today_fn=lambda: date(2024, 2, 20))
+        self.service = BudgetService(self.txns, self.cats, self.budgets, today_fn=lambda: date(2024, 2, 29))
 
     def tearDown(self):
         self.db.conn.close()
@@ -125,7 +125,7 @@ class BudgetServiceTests(unittest.TestCase):
         html = to_xml(budget_page(data))
         self.assertIn('Uncategorized', html)
         self.assertIn('-$10.00', html)
-        self.assertIn('No expenses recorded this month', html)
+        self.assertIn('No expenses recorded this period', html)
 
     def test_month_navigation_and_validation(self):
         self.assertEqual(month_bounds("2024-02"), ("2024_02_01", "2024_02_29"))
@@ -164,6 +164,8 @@ class BudgetServiceTests(unittest.TestCase):
         self.assertEqual(parse_budget_limit("10.000"), 1000)
 
     def test_travel_accumulates_and_spending_consumes_rollover(self):
+        self.budgets.save_changes(rollover=[MonthlyRolloverChange("2024-01", key, True) for key in [self.food.id]])
+        self.service.today_fn = lambda: date(2026, 11, 1)
         self.service.save_limits("2024-01", {self.food.id: "200"})
         self.add("2024-03-15", -50000, category=self.food)
         budget = self.service.build("2024-03")["budgets"][self.food.id]
@@ -192,9 +194,10 @@ class BudgetServiceTests(unittest.TestCase):
         self.assertEqual(july["contribution"], 30000)
         self.assertEqual(july["annual_limit"], 2 * 20000 + 4 * 25000 + 6 * 30000)
         self.assertEqual(self.service.build("2024-03")["budgets"][self.food.id]["next_change"].month, "2024-07")
-        self.assertIn("Next change: July 2024", to_xml(budget_page(self.service.build("2024-03"))))
+        self.assertIn("Next contribution change: 2024-07", to_xml(budget_page(self.service.build("2024-03"))))
 
     def test_annual_budget_sums_months_and_spending_stops_at_selected_month(self):
+        self.service.today_fn = lambda: date(2026, 11, 1)
         self.service.save_limits("2024-01", {self.food.id: "200"})
         self.service.save_limits("2024-07", {self.food.id: "300"})
         self.add("2024-01-01", -2000, category=self.food)
@@ -205,10 +208,11 @@ class BudgetServiceTests(unittest.TestCase):
         data = self.service.build("2024-06")
         self.assertEqual(data["annual_limit"], 300000)
         self.assertEqual(data["annual_expenses"], 6500)
-        self.assertEqual(data["annual_period"], "January–June 2024")
-        self.assertIn("$65.00 of $3,000.00", to_xml(budget_page(data)))
+        self.assertEqual(data["annual_period"], "January 1–2024-06-30")
+        self.assertEqual(data["budgets"][self.food.id]["annual_remaining"], 293500)
 
     def test_midyear_start_excludes_opening_deficit_but_includes_earlier_annual_spending(self):
+        self.service.today_fn = lambda: date(2026, 11, 1)
         self.add("2024-02-01", -10000, category=self.food)
         self.service.save_limits("2024-07", {self.food.id: "200"})
         july = self.service.build("2024-07")["budgets"][self.food.id]
@@ -217,6 +221,7 @@ class BudgetServiceTests(unittest.TestCase):
         self.assertNotIn(self.food.id, self.service.build("2024-06")["limits"])
 
     def test_deficits_refunds_and_historical_corrections_recalculate(self):
+        self.budgets.save_changes(rollover=[MonthlyRolloverChange("2024-01", key, True) for key in [self.food.id, self.unused.id]])
         self.service.save_limits("2024-01", {self.food.id: "100", self.unused.id: "100"})
         txn = self.add("2024-01-01", -25000, category=self.food)
         self.add("2024-02-01", 2500, category=self.food)
@@ -238,6 +243,7 @@ class BudgetServiceTests(unittest.TestCase):
         self.assertEqual(self.service.build("2024-02")["budgets"][self.food.id]["remaining"], 32500)
 
     def test_zero_preserves_rollover_and_stop_resume_discards_it(self):
+        self.budgets.save_changes(rollover=[MonthlyRolloverChange("2024-01", key, True) for key in [self.food.id, None]])
         self.service.save_limits("2024-01", {self.food.id: "100", 0: "10"})
         self.service.save_limits("2024-02", {self.food.id: "0", 0: "0"})
         feb = self.service.build("2024-02")["budgets"]
@@ -287,7 +293,7 @@ class BudgetServiceTests(unittest.TestCase):
         self.service.save_limits("2024-03", {self.unused.id: "100"})
         self.service.save_limits("2024-04", {self.food.id: ""})
         payload = backup.export_backup()
-        self.assertEqual(payload["version"], 4)
+        self.assertEqual(payload["version"], 5)
         self.service.save_limits("2024-02", {self.food.id: "100"})
         backup.restore_backup(payload)
         self.assertEqual(backup.export_backup()["monthly_budgets"], payload["monthly_budgets"])
@@ -325,6 +331,156 @@ class BudgetServiceTests(unittest.TestCase):
                 {"month": "2024-02", "category_id": None, "amount_cents": None},
             ]})
         self.assertEqual(self.budgets.list()[0].amount_cents, 1000)
+
+    def test_new_monthly_budgets_reset_and_rollover_toggle_starts_fresh(self):
+        self.service.today_fn = lambda: date(2025, 1, 1)
+        self.service.save_limits("2024-01", {self.food.id: "100"})
+        self.add("2024-01-10", -2000, category=self.food)
+        self.assertEqual(self.service.build("2024-02")["budgets"][self.food.id]["available"], 10000)
+        self.service.save_category(self.food.id, "2024-02", "monthly", "100", True)
+        self.assertEqual(self.service.build("2024-02")["budgets"][self.food.id]["rollover"], 0)
+        self.service.save_limits("2024-04", {self.food.id: "200"})
+        self.assertEqual(self.service.build("2024-04")["budgets"][self.food.id]["available"], 40000)
+        self.service.save_category(self.food.id, "2024-03", "monthly", "100", False)
+        self.assertEqual(self.service.build("2024-04")["budgets"][self.food.id]["available"], 20000)
+        self.assertTrue(self.service.build("2024-02")["budgets"][self.food.id]["rollover_enabled"])
+        self.assertFalse(self.service.build("2024-04")["budgets"][self.food.id]["rollover_enabled"])
+
+    def test_annual_plans_apply_to_selected_year_and_preserve_later_plans(self):
+        self.service.today_fn = lambda: date(2027, 1, 1)
+        self.service.save_limits("2023-01", {self.food.id: "100"})
+        self.add("2024-01-10", -50000, category=self.food)
+        self.service.save_category(self.food.id, "2024-07", "annual", "3000", False)
+        self.assertEqual(self.service.build("2023-12")["budgets"][self.food.id]["period"], "monthly")
+        january = self.service.build("2024-01")["budgets"][self.food.id]
+        self.assertEqual((january["period"], january["annual_limit"], january["annual_remaining"]), ("annual", 300000, 250000))
+        self.service.save_category(self.food.id, "2026-01", "annual", "4000", False)
+        self.service.save_category(self.food.id, "2025-08", "annual", "3500", False)
+        self.assertEqual(self.service.build("2025-01")["budgets"][self.food.id]["annual_limit"], 350000)
+        self.assertEqual(self.service.build("2026-01")["budgets"][self.food.id]["annual_limit"], 400000)
+        self.assertEqual(self.service.build("2027-01")["budgets"][self.food.id]["annual_limit"], 400000)
+        self.assertEqual(self.budgets.list()[0].amount_cents, 10000)
+
+    def test_type_conversion_requires_amount_and_monthly_conversion_starts_in_january(self):
+        self.service.save_limits("2024-07", {self.food.id: "200"})
+        with self.assertRaises(ValueError):
+            self.service.save_category(self.food.id, "2024-05", "annual", "", False)
+        self.assertEqual(self.budgets.list_plans(), [])
+        self.service.save_category(self.food.id, "2024-05", "annual", "3000", False)
+        with self.assertRaises(ValueError):
+            self.service.save_category(self.food.id, "2024-05", "monthly", "", False)
+        self.service.save_category(self.food.id, "2024-05", "monthly", "150", False)
+        self.assertEqual(self.service.build("2024-01")["limits"][self.food.id], 15000)
+        self.assertEqual(self.service.build("2024-07")["limits"][self.food.id], 20000)
+        self.assertEqual(self.service.build("2023-12")["limits"], {})
+
+    def test_annual_limit_edit_stop_zero_and_compatibility_endpoint(self):
+        self.service.save_category(0, "2024-06", "annual", "1000", False)
+        self.service.save_category(0, "2024-08", "annual", "1500", False)
+        self.assertEqual(self.service.build("2024-01")["budgets"][None]["annual_limit"], 150000)
+        before = (self.budgets.list(), self.budgets.list_plans(), self.budgets.list_rollover())
+        self.service.save_category(0, "2024-08", "annual", "1500.00", False)
+        self.assertEqual(before, (self.budgets.list(), self.budgets.list_plans(), self.budgets.list_rollover()))
+        with self.assertRaises(ValueError):
+            self.service.save_limits("2024-06", {self.food.id: "20", 0: "50"})
+        self.assertEqual(self.budgets.list(), [])
+        self.service.save_category(0, "2024-08", "annual", "", False)
+        self.assertIsNone(self.service.build("2025-01")["budgets"][None]["annual_limit"])
+        self.service.save_category(0, "2024-08", "annual", "0", False)
+        self.assertEqual(self.service.build("2024-01")["budgets"][None]["annual_limit"], 0)
+
+    def test_reporting_cutoffs_drilldowns_pace_and_future_plans(self):
+        self.service.today_fn = lambda: date(2024, 2, 20)
+        self.service.save_limits("2024-01", {self.food.id: "100"})
+        self.service.save_category(self.unused.id, "2024-01", "annual", "3000", False)
+        self.add("2024-02-20", -1000, category=self.food)
+        self.add("2024-02-21", -2000, category=self.food)
+        self.add("2024-03-01", -3000, category=self.food)
+        self.add("2024-02-20", -5000, category=self.unused)
+        data = self.service.build("2024-02")
+        self.assertEqual(data["breakdown"].net_expenses, 6000)
+        self.assertEqual(data["report_end"], "2024-02-20")
+        self.assertIn("date_to=2024-02-20", data["transactions_url"])
+        self.assertAlmostEqual(data["budgets"][self.unused.id]["pace"], 51 / 366)
+        future = self.service.build("2024-03")
+        self.assertIsNone(future["report_end"])
+        self.assertEqual(future["breakdown"].net_expenses, 0)
+        self.assertEqual(future["budgets"][self.unused.id]["annual_expenses"], 5000)
+        annual = self.service.build(view="annual", requested_year="2024")
+        self.assertEqual(annual["report_start"], "2024-01-01")
+        self.assertEqual(annual["report_end"], "2024-02-20")
+        planned = self.service.build(view="annual", requested_year="2025")
+        self.assertIsNone(planned["report_end"])
+        self.assertEqual(planned["annual_expenses"], 0)
+        self.assertIsNone(planned["budgets"][self.unused.id]["pace"])
+        self.service.today_fn = lambda: date(2025, 1, 1)
+        self.assertEqual(self.service.build(view="annual", requested_year="2024")["budgets"][self.unused.id]["pace"], 1)
+
+    def test_leap_day_pace_and_year_validation(self):
+        self.service.save_category(self.food.id, "2024-01", "annual", "100", False)
+        data = self.service.build(view="annual", requested_year="2024")
+        self.assertAlmostEqual(data["budgets"][self.food.id]["pace"], 60 / 366)
+        for raw in ["bad", "2024-02", "0000", "10000", True, 2.5]:
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                budget_year(raw)
+        for raw in ["bad", "week"]:
+            with self.assertRaises(ValueError):
+                self.service.build(view=raw)
+
+    def test_segment_allocation_and_accessible_edge_states(self):
+        for spent, amounts in [(30000, [30000, 20000, 20000]), (60000, [60000, 10000]), (80000, [70000])]:
+            bar = budget_segments(50000, 20000, spent)
+            self.assertEqual([p["amount"] for p in bar["segments"]], amounts)
+            self.assertAlmostEqual(sum(p["percent"] for p in bar["segments"]), 100)
+            self.assertAlmostEqual(bar["boundary"], 50000 / 70000 * 100)
+        self.assertEqual([p["amount"] for p in budget_segments(50000, -10000, 30000)["segments"]], [30000, 10000])
+        for contribution, rollover, spent in [(0, 0, 100), (100, -200, 50), (100, 0, -50)]:
+            bar = budget_segments(contribution, rollover, spent)
+            self.assertTrue(all(0 < p["percent"] <= 100 for p in bar["segments"]))
+        self.service.save_limits("2024-01", {self.food.id: "0"})
+        self.add("2024-01-10", -100, category=self.food)
+        html = to_xml(budget_page(self.service.build("2024-01")))
+        self.assertIn("Over by $1.00", html)
+        self.assertIn('role="img"', html)
+        self.assertNotIn("nan", html.lower())
+
+    def test_v5_backup_preserves_plans_rollover_and_validates_before_replacement(self):
+        backup = BackupService(self.db, AccountRepository(self.db), CategoryRepository(self.db), self.repo,
+                               AnnualIncomeRepository(self.db), self.budgets)
+        self.service.save_category(self.food.id, "2024-01", "monthly", "100", True)
+        self.service.save_category(self.food.id, "2024-03", "monthly", "100", False)
+        self.service.save_category(0, "2024-06", "annual", "2000", False)
+        payload = backup.export_backup()
+        backup.restore_backup(payload)
+        for field in ["budget_plans", "monthly_budget_rollover", "monthly_budgets"]:
+            self.assertEqual(backup.export_backup()[field], payload[field])
+        for field, records in [
+            ("budget_plans", [{"year": True, "category_id": None, "period": "annual", "annual_amount_cents": 100}]),
+            ("budget_plans", [{"year": 2024, "category_id": None, "period": "monthly", "annual_amount_cents": 100}]),
+            ("budget_plans", [{"year": 2024, "category_id": "missing", "period": "annual", "annual_amount_cents": 100}]),
+            ("budget_plans", payload["budget_plans"] * 2),
+            ("monthly_budget_rollover", [{"month": "2024-13", "category_id": None, "enabled": True}]),
+            ("monthly_budget_rollover", [{"month": "2024-01", "category_id": None, "enabled": 1}]),
+            ("monthly_budget_rollover", payload["monthly_budget_rollover"] * 2),
+        ]:
+            with self.subTest(field=field, records=records), self.assertRaises(ValueError):
+                backup.restore_backup({**payload, field: records})
+            self.assertEqual(backup.export_backup()["budget_plans"], payload["budget_plans"])
+        self.cats.delete(self.food.id)
+        self.assertEqual(self.budgets.list_rollover(), [])
+        self.service.clear_limits()
+        self.assertEqual(self.budgets.list_plans(), [])
+
+    def test_legacy_v4_import_seeds_monthly_rollover_without_changing_balance(self):
+        backup = BackupService(self.db, AccountRepository(self.db), CategoryRepository(self.db), self.repo,
+                               AnnualIncomeRepository(self.db), self.budgets)
+        self.service.save_limits("2024-01", {self.food.id: "200", 0: "0"})
+        self.add("2024-01-10", -5000, category=self.food)
+        payload = {**backup.export_backup(), "version": 4}
+        del payload["budget_plans"], payload["monthly_budget_rollover"]
+        backup.restore_backup(payload)
+        feb = self.service.build("2024-02")["budgets"][self.food.id]
+        self.assertEqual((feb["period"], feb["rollover_enabled"], feb["available"]), ("monthly", True, 35000))
 
     def test_transaction_filters_preserve_multiple_categories_and_clear_stale_dates_for_presets(self):
         filters, preset = _parse_filter(QueryParams("date_preset=custom&date_from=2024-02-01&category_id=1&category_id=2&category_id=0"))
@@ -371,9 +527,19 @@ class RecurringBudgetMigrationTests(unittest.TestCase):
         with self.assertRaises(sqlite3.IntegrityError):
             db.execute("INSERT INTO monthly_budgets VALUES ('2024-04', 1, -1)")
         db.conn.rollback()
+        db.conn.executescript((migrations / "0006-budget-plans.sql").read_text())
+        self.assertEqual([(p.year, p.period) for p in repo.list_plans()], [(2024, "monthly"), (2024, "monthly")])
+        self.assertTrue(all(change.enabled and change.month == "2024-01" for change in repo.list_rollover()))
+        txns = TransactionService(TransactionRepository(db))
+        categories = CategoryService(CategoryRepository(db), TransactionRepository(db))
+        service = BudgetService(txns, categories, repo, today_fn=lambda: date(2025, 1, 1))
+        migrated = service.build("2024-02")["budgets"][1]
+        self.assertEqual((migrated["contribution"], migrated["rollover"], migrated["available"]), (20000, 20000, 40000))
         db.execute("DELETE FROM categories WHERE id = 1")
         db.commit()
         self.assertTrue(all(row.category_id is None for row in repo.list()))
+        self.assertTrue(all(row.category_id is None for row in repo.list_plans()))
+        self.assertTrue(all(row.category_id is None for row in repo.list_rollover()))
 
 
 if __name__ == "__main__":

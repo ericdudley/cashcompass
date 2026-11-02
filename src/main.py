@@ -60,6 +60,7 @@ app, rt = fast_app(
         Script(src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"),
         Script(src="https://unpkg.com/htmx.org@2.0.7"),
         Script(src="/static/forms.js", defer=True),
+        Script(src="/static/budget.js", defer=True),
         Script(src="/static/transaction-filters.js", defer=True),
         Script(src="/static/transaction-form.js", defer=True),
         Link(rel="stylesheet", href="/static/app.css"),
